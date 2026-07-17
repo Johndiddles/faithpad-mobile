@@ -1,11 +1,12 @@
-import { Text, View } from "react-native";
+import { router } from "expo-router";
+import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 
-export default function App() {
+export default function AppEntry() {
+  useEffect(() => router.replace("/welcome"), []);
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <Text className="text-xl font-bold text-blue-500">
-        Welcome to Faith Pad!
-      </Text>
+    <View className="flex-1 items-center justify-center bg-background">
+      <ActivityIndicator size="large" color="#e4b022" />
     </View>
   );
 }
