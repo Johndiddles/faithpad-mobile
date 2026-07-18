@@ -6,7 +6,7 @@
 }
 
 .theme-light {
-  --editor-bg: #FAF8F5;          /* Warm cream/paper background */
+  --editor-bg: transparent;      /* Transparent background */
   --editor-text: #2C2A29;        /* Soft charcoal body text */
   --editor-accent: #B8860B;      /* Theological warm gold */
   --editor-accent-hover: #9B7008;
@@ -39,7 +39,7 @@
 }
 
 .theme-dark {
-  --editor-bg: #121212;          /* Very low glare charcoal */
+  --editor-bg: transparent;      /* Transparent background */
   --editor-text: #E5E5EA;        /* Soft off-white */
   --editor-accent: #D4AF37;      /* Theological gold */
   --editor-accent-hover: #E8C14D;
@@ -101,9 +101,10 @@ html, body {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 20px 80px 20px;
+  padding: 0 0 100px 0;          /* Removed padding except bottom scroll padding */
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 /* Content Editable Canvas */
@@ -116,6 +117,7 @@ html, body {
   white-space: pre-wrap;
   word-break: break-word;
   caret-color: var(--editor-accent);
+  color: var(--editor-text);     /* Explicitly set editor text color */
   min-height: 150px;
 }
 
@@ -127,8 +129,8 @@ html, body {
 /* Custom placeholder styling */
 .editor-placeholder {
   position: absolute;
-  top: 16px;
-  left: 20px;
+  top: 0;                        /* Aligned with padding-less start */
+  left: 0;                       /* Aligned with padding-less start */
   font-size: 17px;
   color: var(--editor-placeholder);
   pointer-events: none;

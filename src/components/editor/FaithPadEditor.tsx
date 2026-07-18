@@ -1,6 +1,6 @@
-import React, { useImperativeHandle, useState, forwardRef } from 'react';
-import { View, StyleSheet } from 'react-native';
-import FaithPadEditorDom from './FaithPadEditorDom';
+import React, { useImperativeHandle, useState, forwardRef } from "react";
+import { View, StyleSheet } from "react-native";
+import FaithPadEditorDom from "./FaithPadEditorDom";
 
 export interface FaithPadEditorRef {
   toggleBold: () => void;
@@ -20,62 +20,77 @@ export interface FaithPadEditorRef {
 export interface FaithPadEditorProps {
   initialContent?: string;
   onChange?: (content: string) => void;
-  theme?: 'light' | 'dark';
+  theme?: "light" | "dark";
 }
 
-export const FaithPadEditor = forwardRef<FaithPadEditorRef, FaithPadEditorProps>(
-  ({ initialContent, onChange, theme = 'light' }, ref) => {
-    const [editorCommand, setEditorCommand] = useState<{
-      id: string;
-      type: string;
-      value?: any;
-    } | null>(null);
+export const FaithPadEditor = forwardRef<
+  FaithPadEditorRef,
+  FaithPadEditorProps
+>(({ initialContent, onChange, theme = "light" }, ref) => {
+  const [editorCommand, setEditorCommand] = useState<{
+    id: string;
+    type: string;
+    value?: any;
+  } | null>(null);
 
-    useImperativeHandle(ref, () => ({
-      toggleBold: () => {
-        setEditorCommand({ id: Math.random().toString(), type: 'bold' });
-      },
-      toggleItalic: () => {
-        setEditorCommand({ id: Math.random().toString(), type: 'italic' });
-      },
-      setTextColor: (color: string) => {
-        setEditorCommand({ id: Math.random().toString(), type: 'text-color', value: color });
-      },
-      setHighlightColor: (color: string) => {
-        setEditorCommand({ id: Math.random().toString(), type: 'highlight-color', value: color });
-      },
-      insertScripture: (scripture) => {
-        setEditorCommand({ id: Math.random().toString(), type: 'insert-scripture', value: scripture });
-      },
-    }));
+  useImperativeHandle(ref, () => ({
+    toggleBold: () => {
+      setEditorCommand({ id: Math.random().toString(), type: "bold" });
+    },
+    toggleItalic: () => {
+      setEditorCommand({ id: Math.random().toString(), type: "italic" });
+    },
+    setTextColor: (color: string) => {
+      setEditorCommand({
+        id: Math.random().toString(),
+        type: "text-color",
+        value: color,
+      });
+    },
+    setHighlightColor: (color: string) => {
+      setEditorCommand({
+        id: Math.random().toString(),
+        type: "highlight-color",
+        value: color,
+      });
+    },
+    insertScripture: (scripture) => {
+      setEditorCommand({
+        id: Math.random().toString(),
+        type: "insert-scripture",
+        value: scripture,
+      });
+    },
+  }));
 
-    return (
-      <View style={styles.container}>
-        <FaithPadEditorDom
-          initialContent={initialContent}
-          onChange={onChange}
-          theme={theme}
-          command={editorCommand}
-          dom={{
-            scrollEnabled: false,
-            keyboardDisplayRequiresUserAction: false,
-          }}
-          style={styles.webview}
-        />
-      </View>
-    );
-  }
-);
+  return (
+    <View style={styles.container}>
+      <FaithPadEditorDom
+        initialContent={initialContent}
+        onChange={onChange}
+        theme={theme}
+        command={editorCommand}
+        dom={{
+          scrollEnabled: false,
+          keyboardDisplayRequiresUserAction: false,
+          opaque: false,
+          containerStyle: { backgroundColor: "transparent" },
+        }}
+        style={styles.webview}
+      />
+    </View>
+  );
+});
 
-FaithPadEditor.displayName = 'FaithPadEditor';
+FaithPadEditor.displayName = "FaithPadEditor";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   webview: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
 });

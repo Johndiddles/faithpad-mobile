@@ -1,14 +1,20 @@
 "use dom";
 // @ts-nocheck
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { LexicalComposer } from '@lexical/react/LexicalComposer';
-import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
-import { ContentEditable } from '@lexical/react/LexicalContentEditable';
-import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
-import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { HeadingNode } from '@lexical/rich-text';
-import { ListNode, ListItemNode } from '@lexical/list';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { HeadingNode } from "@lexical/rich-text";
+import { ListNode, ListItemNode } from "@lexical/list";
 import {
   FORMAT_TEXT_COMMAND,
   $getSelection,
@@ -16,35 +22,35 @@ import {
   $getRoot,
   $createParagraphNode,
   $createTextNode,
-} from 'lexical';
-import { $patchStyleText } from '@lexical/selection';
+} from "lexical";
+import { $patchStyleText } from "@lexical/selection";
 
-import { ScriptureNode, $createScriptureNode } from './nodes/ScriptureNode';
-import './FaithPadEditor.css';
+import { ScriptureNode, $createScriptureNode } from "./nodes/ScriptureNode";
+import "./FaithPadEditor.css";
 
 // Selection Formatting Constants
 const TEXT_COLORS_LIGHT = [
-  { name: 'Default', value: 'inherit' },
-  { name: 'Red', value: '#C0392B' },
-  { name: 'Gold', value: '#B8860B' },
-  { name: 'Green', value: '#27AE60' },
-  { name: 'Blue', value: '#2980B9' },
+  { name: "Default", value: "inherit" },
+  { name: "Red", value: "#C0392B" },
+  { name: "Gold", value: "#B8860B" },
+  { name: "Green", value: "#27AE60" },
+  { name: "Blue", value: "#2980B9" },
 ];
 
 const TEXT_COLORS_DARK = [
-  { name: 'Default', value: 'inherit' },
-  { name: 'Red', value: '#EC7063' },
-  { name: 'Gold', value: '#D4AF37' },
-  { name: 'Green', value: '#58D68D' },
-  { name: 'Blue', value: '#5DADE2' },
+  { name: "Default", value: "inherit" },
+  { name: "Red", value: "#EC7063" },
+  { name: "Gold", value: "#D4AF37" },
+  { name: "Green", value: "#58D68D" },
+  { name: "Blue", value: "#5DADE2" },
 ];
 
 const HIGHLIGHT_COLORS = [
-  { name: 'Clear', value: 'transparent' },
-  { name: 'Gold', value: 'rgba(212, 175, 55, 0.3)' },
-  { name: 'Green', value: 'rgba(46, 204, 113, 0.3)' },
-  { name: 'Blue', value: 'rgba(52, 152, 219, 0.3)' },
-  { name: 'Red', value: 'rgba(231, 76, 60, 0.3)' },
+  { name: "Clear", value: "transparent" },
+  { name: "Gold", value: "rgba(212, 175, 55, 0.3)" },
+  { name: "Green", value: "rgba(46, 204, 113, 0.3)" },
+  { name: "Blue", value: "rgba(52, 152, 219, 0.3)" },
+  { name: "Red", value: "rgba(231, 76, 60, 0.3)" },
 ];
 
 // 1. Initial Content Loader Plugin
@@ -56,15 +62,22 @@ function InitialContentPlugin({ content }: InitialContentPluginProps) {
   const [editor] = useLexicalComposerContext();
   const isInitialized = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (content && !isInitialized.current) {
       isInitialized.current = true;
       try {
         // Try parsing as Lexical State AST JSON
-        const parsedState = editor.parseEditorState(content);
-        editor.setEditorState(parsedState);
+        // const parsedState = editor.parseEditorState(content);
+        // editor.setEditorState(parsedState);
+        queueMicrotask(() => {
+          const editorState = editor.parseEditorState(content);
+          editor.setEditorState(editorState);
+        });
       } catch (e) {
-        console.error('Failed to parse initial content in Lexical, falling back to text:', e);
+        console.error(
+          "Failed to parse initial content in Lexical, falling back to text:",
+          e,
+        );
         // Fallback: Populate as a single paragraph if it is plain text
         editor.update(() => {
           const root = $getRoot();
@@ -93,11 +106,11 @@ function BridgePlugin({ registerApi }: BridgePluginProps) {
       registerApi({
         toggleBold: () => {
           editor.focus();
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
         },
         toggleItalic: () => {
           editor.focus();
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
         },
         setTextColor: (color: string) => {
           editor.focus();
@@ -113,7 +126,7 @@ function BridgePlugin({ registerApi }: BridgePluginProps) {
           editor.update(() => {
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
-              $patchStyleText(selection, { 'background-color': color });
+              $patchStyleText(selection, { "background-color": color });
             }
           });
         },
@@ -136,7 +149,7 @@ function BridgePlugin({ registerApi }: BridgePluginProps) {
                 scripture.verseEnd || scripture.verseStart,
                 scripture.translation,
                 true, // default collapsed badge
-                scripture.verseText || ''
+                scripture.verseText || "",
               );
               selection.insertNodes([node]);
             }
@@ -164,13 +177,13 @@ function CommandPlugin({ command }: CommandPluginProps) {
       editor.focus();
 
       switch (command.type) {
-        case 'bold':
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
+        case "bold":
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
           break;
-        case 'italic':
-          editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
+        case "italic":
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
           break;
-        case 'text-color':
+        case "text-color":
           editor.update(() => {
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
@@ -178,15 +191,15 @@ function CommandPlugin({ command }: CommandPluginProps) {
             }
           });
           break;
-        case 'highlight-color':
+        case "highlight-color":
           editor.update(() => {
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
-              $patchStyleText(selection, { 'background-color': command.value });
+              $patchStyleText(selection, { "background-color": command.value });
             }
           });
           break;
-        case 'insert-scripture':
+        case "insert-scripture":
           editor.update(() => {
             const selection = $getSelection();
             if ($isRangeSelection(selection)) {
@@ -197,7 +210,7 @@ function CommandPlugin({ command }: CommandPluginProps) {
                 command.value.verseEnd || command.value.verseStart,
                 command.value.translation,
                 true, // starts collapsed
-                command.value.verseText || ''
+                command.value.verseText || "",
               );
               selection.insertNodes([node]);
             }
@@ -214,7 +227,7 @@ function CommandPlugin({ command }: CommandPluginProps) {
 
 // 3. Floating Toolbar Plugin (rendered inside the webview)
 interface FloatingToolbarPluginProps {
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
 }
 
 function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
@@ -223,12 +236,12 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
   const [isItalic, setIsItalic] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
-  
+
   // Palette states
   const [showTextPalette, setShowTextPalette] = useState(false);
   const [showHighlightPalette, setShowHighlightPalette] = useState(false);
 
-  const textColors = theme === 'dark' ? TEXT_COLORS_DARK : TEXT_COLORS_LIGHT;
+  const textColors = theme === "dark" ? TEXT_COLORS_DARK : TEXT_COLORS_LIGHT;
 
   const updateToolbar = useCallback(() => {
     editor.getEditorState().read(() => {
@@ -245,7 +258,8 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
         const rect = range.getBoundingClientRect();
 
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        const scrollLeft =
+          window.scrollX || document.documentElement.scrollLeft;
 
         // Position toolbar centered, 54px above selection rect
         setCoords({
@@ -253,8 +267,8 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
           left: rect.left + scrollLeft + rect.width / 2,
         });
 
-        setIsBold(selection.hasFormat('bold'));
-        setIsItalic(selection.hasFormat('italic'));
+        setIsBold(selection.hasFormat("bold"));
+        setIsItalic(selection.hasFormat("italic"));
         setShowToolbar(true);
       } else {
         setShowToolbar(false);
@@ -268,9 +282,9 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
     const handleSelectionChange = () => {
       updateToolbar();
     };
-    document.addEventListener('selectionchange', handleSelectionChange);
+    document.addEventListener("selectionchange", handleSelectionChange);
     return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener("selectionchange", handleSelectionChange);
     };
   }, [updateToolbar]);
 
@@ -282,12 +296,12 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
 
   const toggleBold = (e: React.MouseEvent) => {
     e.preventDefault();
-    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'bold');
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
   };
 
   const toggleItalic = (e: React.MouseEvent) => {
     e.preventDefault();
-    editor.dispatchCommand(FORMAT_TEXT_COMMAND, 'italic');
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
   };
 
   const handleTextColor = (e: React.MouseEvent, color: string) => {
@@ -306,7 +320,7 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
     editor.update(() => {
       const selection = $getSelection();
       if ($isRangeSelection(selection)) {
-        $patchStyleText(selection, { 'background-color': color });
+        $patchStyleText(selection, { "background-color": color });
       }
     });
     setShowHighlightPalette(false);
@@ -318,27 +332,36 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
     <div
       className="floating-toolbar visible"
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: `${coords.top}px`,
         left: `${coords.left}px`,
-        transform: 'translateX(-50%)',
+        transform: "translateX(-50%)",
       }}
     >
       <button
         onMouseDown={(e) => e.preventDefault()}
         onClick={toggleBold}
-        className={`tb-btn ${isBold ? 'active' : ''}`}
+        className={`tb-btn ${isBold ? "active" : ""}`}
         title="Bold"
       >
-        <span style={{ fontWeight: 'bold', fontSize: '15px' }}>B</span>
+        <span style={{ fontWeight: "bold", fontSize: "15px" }}>B</span>
       </button>
       <button
         onMouseDown={(e) => e.preventDefault()}
         onClick={toggleItalic}
-        className={`tb-btn ${isItalic ? 'active' : ''}`}
+        className={`tb-btn ${isItalic ? "active" : ""}`}
         title="Italic"
       >
-        <span style={{ fontStyle: 'italic', fontSize: '15px', fontFamily: 'serif', fontWeight: 'bold' }}>I</span>
+        <span
+          style={{
+            fontStyle: "italic",
+            fontSize: "15px",
+            fontFamily: "serif",
+            fontWeight: "bold",
+          }}
+        >
+          I
+        </span>
       </button>
 
       <div className="tb-divider" />
@@ -352,12 +375,20 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
             setShowTextPalette(!showTextPalette);
             setShowHighlightPalette(false);
           }}
-          className={`tb-btn ${showTextPalette ? 'active' : ''}`}
+          className={`tb-btn ${showTextPalette ? "active" : ""}`}
           title="Text Color"
         >
-          <span style={{ fontSize: '15px', textDecoration: 'underline', fontWeight: 'bold' }}>A</span>
+          <span
+            style={{
+              fontSize: "15px",
+              textDecoration: "underline",
+              fontWeight: "bold",
+            }}
+          >
+            A
+          </span>
         </button>
-        <div className={`tb-color-palette ${showTextPalette ? 'visible' : ''}`}>
+        <div className={`tb-color-palette ${showTextPalette ? "visible" : ""}`}>
           {textColors.map((color) => (
             <div
               key={color.name}
@@ -365,8 +396,13 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
               onClick={(e) => handleTextColor(e, color.value)}
               className="color-dot"
               style={{
-                backgroundColor: color.value === 'inherit' ? (theme === 'dark' ? '#fff' : '#000') : color.value,
-                boxShadow: '0 0 2px rgba(0,0,0,0.2)',
+                backgroundColor:
+                  color.value === "inherit"
+                    ? theme === "dark"
+                      ? "#fff"
+                      : "#000"
+                    : color.value,
+                boxShadow: "0 0 2px rgba(0,0,0,0.2)",
               }}
               title={color.name}
             />
@@ -383,12 +419,23 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
             setShowHighlightPalette(!showHighlightPalette);
             setShowTextPalette(false);
           }}
-          className={`tb-btn ${showHighlightPalette ? 'active' : ''}`}
+          className={`tb-btn ${showHighlightPalette ? "active" : ""}`}
           title="Highlight Color"
         >
-          <span style={{ fontSize: '14px', background: 'rgba(212, 175, 55, 0.4)', padding: '2px 4px', borderRadius: '3px' }}>✎</span>
+          <span
+            style={{
+              fontSize: "14px",
+              background: "rgba(212, 175, 55, 0.4)",
+              padding: "2px 4px",
+              borderRadius: "3px",
+            }}
+          >
+            ✎
+          </span>
         </button>
-        <div className={`tb-color-palette ${showHighlightPalette ? 'visible' : ''}`}>
+        <div
+          className={`tb-color-palette ${showHighlightPalette ? "visible" : ""}`}
+        >
           {HIGHLIGHT_COLORS.map((color) => (
             <div
               key={color.name}
@@ -396,11 +443,19 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
               onClick={(e) => handleHighlightColor(e, color.value)}
               className="color-dot"
               style={{
-                backgroundColor: color.value === 'transparent' ? '#fff' : color.value,
-                backgroundImage: color.value === 'transparent' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)' : 'none',
-                backgroundSize: color.value === 'transparent' ? '6px 6px' : 'auto',
-                backgroundPosition: color.value === 'transparent' ? '0 0, 0 3px, 3px -3px, -3px 0px' : 'auto',
-                boxShadow: '0 0 2px rgba(0,0,0,0.2)',
+                backgroundColor:
+                  color.value === "transparent" ? "#fff" : color.value,
+                backgroundImage:
+                  color.value === "transparent"
+                    ? "linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)"
+                    : "none",
+                backgroundSize:
+                  color.value === "transparent" ? "6px 6px" : "auto",
+                backgroundPosition:
+                  color.value === "transparent"
+                    ? "0 0, 0 3px, 3px -3px, -3px 0px"
+                    : "auto",
+                boxShadow: "0 0 2px rgba(0,0,0,0.2)",
               }}
               title={color.name}
             />
@@ -415,7 +470,7 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
 interface FaithPadEditorDomProps {
   initialContent?: string;
   onChange?: (json: string) => void;
-  theme?: 'light' | 'dark';
+  theme?: "light" | "dark";
   registerApi?: (api: any) => void;
   command?: { id: string; type: string; value?: any } | null;
   dom?: any;
@@ -425,23 +480,23 @@ interface FaithPadEditorDomProps {
 export default function FaithPadEditorDom({
   initialContent,
   onChange,
-  theme = 'light',
+  theme = "light",
   registerApi,
   command,
 }: FaithPadEditorDomProps) {
   // Config matching Lexical AST
   const initialConfig = {
-    namespace: 'FaithPadEditor',
+    namespace: "FaithPadEditor",
     theme: {
-      paragraph: 'editor-paragraph',
+      paragraph: "editor-paragraph",
       text: {
-        bold: 'editor-text-bold',
-        italic: 'editor-text-italic',
+        bold: "editor-text-bold",
+        italic: "editor-text-italic",
       },
     },
     nodes: [ScriptureNode, HeadingNode, ListNode, ListItemNode],
     onError: (error: Error) => {
-      console.error('[Lexical] Error:', error);
+      console.error("[Lexical] Error:", error);
     },
   };
 

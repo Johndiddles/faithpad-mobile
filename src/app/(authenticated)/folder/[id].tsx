@@ -14,51 +14,11 @@ import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { useNotesStore } from "../../../store";
 import { Note } from "../../../lib/types";
-
-// Helper to format date like Apple Notes
-function formatNoteDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-
-  // Reset hours to compare calendar days
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const checkDate = new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-  );
-
-  if (checkDate.getTime() === today.getTime()) {
-    // Return time e.g., 2:30 PM
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  } else if (checkDate.getTime() === yesterday.getTime()) {
-    return "Yesterday";
-  } else if (today.getTime() - checkDate.getTime() < 7 * 24 * 60 * 60 * 1000) {
-    // Within last week: return day name e.g., Tuesday
-    return date.toLocaleDateString([], { weekday: "long" });
-  } else {
-    // Older: return short date e.g., 7/15/26
-    return date.toLocaleDateString([], {
-      month: "numeric",
-      day: "numeric",
-      year: "2-digit",
-    });
-  }
-}
-
-// Helper to get preview snippet from note blocks
-function getNoteSnippet(note: Note): string {
-  const textBlock = note.blocks.find(
-    (b) => b.type === "paragraph" && b.content.trim() !== "",
-  );
-  if (textBlock) {
-    return textBlock.content.length > 60
-      ? textBlock.content.substring(0, 60) + "..."
-      : textBlock.content;
-  }
-  return "No additional text";
-}
+import {
+  formatNoteDate,
+  getNoteSnippet,
+  getPlainTextFromLexical,
+} from "@/lib/utils";
 
 export default function FolderNotesListScreen() {
   const router = useRouter();
@@ -72,7 +32,6 @@ export default function FolderNotesListScreen() {
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [moveModalVisible, setMoveModalVisible] = useState(false);
 
-  // Resolve Folder Title
   const folder = folders.find((f) => f.id === folderId);
   const folderTitle =
     folderId === "all"
@@ -81,24 +40,26 @@ export default function FolderNotesListScreen() {
         ? "Uncategorized"
         : folder?.name || "Notes";
 
-  // Filter notes based on folder & search query
   const filteredNotes = notes.filter((note) => {
-    // Folder filter
     if (folderId === "uncategorized") {
       if (note.folderId !== null) return false;
     } else if (folderId !== "all") {
       if (note.folderId !== folderId) return false;
     }
 
-    // Search filter
     if (searchQuery.trim() !== "") {
       const query = searchQuery.toLowerCase();
       const titleMatches = note.title?.toLowerCase().includes(query) || false;
-      const contentMatches = note.blocks.some(
-        (b) =>
-          b.content.toLowerCase().includes(query) ||
-          b.items?.some((i) => i.toLowerCase().includes(query)),
-      );
+      const contentMatches = note.blocks.some((b) => {
+        const content = b.content.startsWith('{"root":')
+          ? getPlainTextFromLexical(b.content)
+          : b.content;
+        return (
+          content.toLowerCase().includes(query) ||
+          b.items?.some((i) => i.toLowerCase().includes(query)) ||
+          false
+        );
+      });
       return titleMatches || contentMatches;
     }
 
@@ -141,7 +102,6 @@ export default function FolderNotesListScreen() {
       className="flex-1 bg-background"
       edges={["top", "left", "right"]}
     >
-      {/* Custom navigation bar */}
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border/10">
         <Pressable
           onPress={() => router.replace("/folders")}
@@ -163,10 +123,9 @@ export default function FolderNotesListScreen() {
         <AppText weight="semibold" className="text-lg text-foreground">
           {folderTitle}
         </AppText>
-        <View className="w-16" /> {/* Spacer to center title */}
+        <View className="w-16" />
       </View>
 
-      {/* iOS Search Bar */}
       <View className="px-6 pt-3 pb-2">
         <View className="flex-row items-center bg-secondary/60 dark:bg-secondary/20 rounded-xl px-3.5 py-2.5">
           <Ionicons
@@ -267,7 +226,7 @@ export default function FolderNotesListScreen() {
         className="flex-row items-center justify-between px-6 py-4 bg-background border-t border-border"
         style={{ paddingBottom: Platform.OS === "ios" ? 24 : 16 }}
       >
-        <View className="w-6" /> {/* Spacer */}
+        <View className="w-6" />
         <AppText className="text-xs text-muted-foreground">
           {filteredNotes.length} {filteredNotes.length === 1 ? "Note" : "Notes"}
         </AppText>

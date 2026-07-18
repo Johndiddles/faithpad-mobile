@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -18,7 +19,6 @@ import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BibleCard, BibleComparison } from "@/components/ui/bible-card";
 import { useNotesStore, useAuthStore } from "../../../store";
 import { EditorBlock, BlockType } from "../../../lib/types";
 import {
@@ -29,6 +29,189 @@ import {
 import { cn } from "@/lib/utils";
 import { Dropdown } from "@/components/ui/dropdown";
 import { BIBLE_METADATA } from "../../../lib/bible-metadata";
+import {
+  FaithPadEditor,
+  FaithPadEditorRef,
+} from "@/components/editor/FaithPadEditor";
+
+const BOOK_NAME_TO_USFM: Record<string, string> = {
+  Genesis: "GEN",
+  Exodus: "EXD",
+  Leviticus: "LEV",
+  Numbers: "NUM",
+  Deuteronomy: "DEU",
+  Joshua: "JOS",
+  Judges: "JDG",
+  Ruth: "RUT",
+  "1 Samuel": "1SA",
+  "2 Samuel": "2SA",
+  "1 Kings": "1KI",
+  "2 Kings": "2KI",
+  "1 Chronicles": "1CH",
+  "2 Chronicles": "2CH",
+  Ezra: "EZR",
+  Nehemiah: "NEH",
+  Esther: "EST",
+  Job: "JOB",
+  Psalm: "PSA",
+  Psalms: "PSA",
+  Proverbs: "PRO",
+  Ecclesiastes: "ECC",
+  "Song of Solomon": "SNG",
+  Isaiah: "ISA",
+  Jeremiah: "JER",
+  Lamentations: "LAM",
+  Ezekiel: "EZK",
+  Daniel: "DAN",
+  Hosea: "HOS",
+  Joel: "JOL",
+  Amos: "AMO",
+  Obadiah: "OBA",
+  Jonah: "JON",
+  Micah: "MIC",
+  Nahum: "NAM",
+  Habakkuk: "HAB",
+  Zephaniah: "ZEP",
+  Haggai: "HAG",
+  Zechariah: "ZEC",
+  Malachi: "MAL",
+  Matthew: "MAT",
+  Mark: "MRK",
+  Luke: "LUK",
+  John: "JHN",
+  Acts: "ACT",
+  Romans: "ROM",
+  "1 Corinthians": "1CO",
+  "2 Corinthians": "2CO",
+  Galatians: "GAL",
+  Ephesians: "EPH",
+  Philippians: "PHP",
+  Colossians: "COL",
+  "1 Thessalonians": "1TH",
+  "2 Thessalonians": "2TH",
+  "1 Timothy": "1TI",
+  "2 Timothy": "2TI",
+  Titus: "TIT",
+  Philemon: "PHM",
+  Hebrews: "HEB",
+  James: "JAS",
+  "1 Peter": "1PE",
+  "2 Peter": "2PE",
+  "1 John": "1JN",
+  "2 John": "2JN",
+  "3 John": "3JN",
+  Jude: "JUD",
+  Revelation: "REV",
+};
+
+const EMPTY_LEXICAL_STATE = `{"root":{"children":[{"children":[],"direction":"ltr","format":"","indent":0,"type":"paragraph","version":1}],"direction":"ltr","format":"","indent":0,"type":"root","version":1}}`;
+
+function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
+  if (oldBlocks.length === 1 && oldBlocks[0].content.startsWith('{"root":')) {
+    return oldBlocks[0].content;
+  }
+
+  const children: any[] = [];
+
+  for (const block of oldBlocks) {
+    if (block.type === "paragraph" || block.type === "header") {
+      const type = block.type === "header" ? "heading" : "paragraph";
+      const headingTag = block.type === "header" ? "h2" : undefined;
+      children.push({
+        type,
+        ...(headingTag ? { tag: headingTag } : {}),
+        children: [
+          {
+            detail: 0,
+            format: 0,
+            mode: "normal",
+            style: "",
+            text: block.content,
+            type: "text",
+            version: 1,
+          },
+        ],
+        direction: "ltr",
+        format: "",
+        indent: 0,
+        version: 1,
+      });
+    } else if (block.type === "bullet-list" && block.items) {
+      children.push({
+        type: "list",
+        listType: "bullet",
+        tag: "ul",
+        start: 1,
+        children: block.items.map((item) => ({
+          type: "listitem",
+          children: [
+            {
+              detail: 0,
+              format: 0,
+              mode: "normal",
+              style: "",
+              text: item,
+              type: "text",
+              version: 1,
+            },
+          ],
+          direction: "ltr",
+          format: "",
+          indent: 0,
+          version: 1,
+        })),
+        direction: "ltr",
+        format: "",
+        indent: 0,
+        version: 1,
+      });
+    } else if (block.type === "scripture") {
+      const match = parseScriptureRef(block.scriptureRef || block.content);
+      const usfm = match ? BOOK_NAME_TO_USFM[match.book] || "JHN" : "JHN";
+      const chapter = match ? match.chapter : 1;
+      const verseStart = match ? match.verseStart : 1;
+      const verseEnd = match ? match.verseEnd || match.verseStart : 1;
+
+      children.push({
+        type: "paragraph",
+        children: [
+          {
+            type: "scripture",
+            version: 1,
+            bookUSFM: usfm,
+            chapter,
+            verseStart,
+            verseEnd,
+            translation: block.translation || "ESV",
+            isCollapsed: block.isCollapsed ?? true,
+            verseText: block.verseText || "",
+          },
+        ],
+        direction: "ltr",
+        format: "",
+        indent: 0,
+        version: 1,
+      });
+    }
+  }
+
+  if (children.length === 0) {
+    return EMPTY_LEXICAL_STATE;
+  }
+
+  const lexicalState = {
+    root: {
+      type: "root",
+      version: 1,
+      direction: "ltr",
+      format: "",
+      indent: 0,
+      children,
+    },
+  };
+
+  return JSON.stringify(lexicalState);
+}
 
 // Sharing Zod Validation Schema
 const shareSchema = z.object({
@@ -38,11 +221,6 @@ const shareSchema = z.object({
     .email("Please enter a valid email address"),
   permissionLevel: z.enum(["VIEW", "EDIT"]),
 });
-
-// Helper function to generate unique block IDs outside of render
-const generateUniqueBlockId = (prefix: string = "b") => {
-  return `${prefix}_${Math.random().toString(36).substring(7)}`;
-};
 
 export default function SingleNoteEditorScreen() {
   const router = useRouter();
@@ -58,10 +236,7 @@ export default function SingleNoteEditorScreen() {
   // Local state - declared before conditional return to satisfy hook rules
   const [blocks, setBlocks] = useState<EditorBlock[]>(note?.blocks || []);
   const [noteTitle, setNoteTitle] = useState(note?.title || "");
-  const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing">("synced");
-
-  console.log(JSON.stringify(blocks, null, 2));
 
   // Modals state
   const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -80,11 +255,13 @@ export default function SingleNoteEditorScreen() {
   >("AMP");
   const [isInsertingComparison, setIsInsertingComparison] = useState(false);
 
-  // Dynamic refs for text input navigation
-  const inputRefs = useRef<Record<string, any>>({});
-
-  // Debounce ref for AI Smart Detection
-  const parseDebounceTimeout = useRef<any>(null);
+  // Theme & Lexical Editor State Refs
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === "dark" ? "dark" : "light";
+  const editorRef = useRef<FaithPadEditorRef>(null);
+  const initialEditorContent = React.useMemo(() => {
+    return migrateBlocksToLexical(note?.blocks || []);
+  }, [note?.blocks]);
 
   // Sharing form
   const {
@@ -154,322 +331,17 @@ export default function SingleNoteEditorScreen() {
     syncToCloud(blocks, text);
   };
 
-  // Block handlers
-  const handleUpdateBlockText = (blockId: string, text: string) => {
+  const handleEditorChange = (lexicalJson: string) => {
     if (!canEdit) return;
-
-    const updated = blocks.map((b) =>
-      b.id === blockId ? { ...b, content: text } : b,
-    );
+    const updated: EditorBlock[] = [
+      {
+        id: "lexical_content",
+        type: "paragraph" as BlockType,
+        content: lexicalJson,
+      },
+    ];
     setBlocks(updated);
     syncToCloud(updated, noteTitle);
-
-    // Trigger AI Smart Detection if active
-    if (user?.aiDetectionEnabled) {
-      triggerAIScriptureDetection(blockId, text);
-    }
-  };
-
-  const handleUpdateListItem = (
-    blockId: string,
-    itemIdx: number,
-    text: string,
-  ) => {
-    if (!canEdit) return;
-
-    const updated = blocks.map((b) => {
-      if (b.id === blockId && b.items) {
-        const newItems = [...b.items];
-        newItems[itemIdx] = text;
-        return { ...b, items: newItems };
-      }
-      return b;
-    });
-    setBlocks(updated);
-    syncToCloud(updated, noteTitle);
-  };
-
-  const handleAddListItem = (blockId: string, currentIndex?: number) => {
-    if (!canEdit) return;
-
-    let targetIdx = -1;
-    const updated = blocks.map((b) => {
-      if (b.id === blockId && b.items) {
-        const newItems = [...b.items];
-        const insertAt =
-          currentIndex !== undefined ? currentIndex + 1 : newItems.length;
-        newItems.splice(insertAt, 0, "");
-        targetIdx = insertAt;
-        return { ...b, items: newItems };
-      }
-      return b;
-    });
-
-    setBlocks(updated);
-    syncToCloud(updated, noteTitle);
-
-    if (targetIdx !== -1) {
-      setTimeout(() => {
-        inputRefs.current[`${blockId}_${targetIdx}`]?.focus();
-      }, 100);
-    }
-  };
-
-  const handleRemoveListItem = (blockId: string, itemIdx: number) => {
-    if (!canEdit) return;
-
-    const updated = blocks.map((b) => {
-      if (b.id === blockId && b.items) {
-        const newItems = b.items.filter((_, idx) => idx !== itemIdx);
-        return { ...b, items: newItems.length === 0 ? [""] : newItems };
-      }
-      return b;
-    });
-    setBlocks(updated);
-    syncToCloud(updated, noteTitle);
-
-    const prevIdx = Math.max(0, itemIdx - 1);
-    setTimeout(() => {
-      inputRefs.current[`${blockId}_${prevIdx}`]?.focus();
-    }, 100);
-  };
-
-  const handleListItemSubmit = (blockId: string, itemIdx: number) => {
-    if (!canEdit) return;
-    const block = blocks.find((b) => b.id === blockId);
-    if (!block || !block.items) return;
-
-    const itemText = block.items[itemIdx];
-    if (itemText.trim() === "") {
-      // Exit bullet list since the item is empty
-      const newItems = block.items.filter((_, idx) => idx !== itemIdx);
-
-      let updated = blocks.map((b) => {
-        if (b.id === blockId) {
-          return { ...b, items: newItems.length === 0 ? [""] : newItems };
-        }
-        return b;
-      });
-
-      const listIndex = updated.findIndex((b) => b.id === blockId);
-      let targetParagraphId = "";
-
-      const nextBlock = updated[listIndex + 1];
-      if (nextBlock && nextBlock.type === "paragraph") {
-        targetParagraphId = nextBlock.id;
-      } else {
-        targetParagraphId = generateUniqueBlockId("b");
-        updated.splice(listIndex + 1, 0, {
-          id: targetParagraphId,
-          type: "paragraph",
-          content: "",
-        });
-      }
-
-      if (newItems.length === 0) {
-        updated = updated.filter((b) => b.id !== blockId);
-      }
-
-      setBlocks(updated);
-      syncToCloud(updated, noteTitle);
-      setActiveBlockId(targetParagraphId);
-
-      setTimeout(() => {
-        inputRefs.current[targetParagraphId]?.focus();
-      }, 100);
-    } else {
-      handleAddListItem(blockId, itemIdx);
-    }
-  };
-
-  const handleListItemBackspace = (blockId: string, itemIdx: number) => {
-    if (!canEdit) return;
-    const block = blocks.find((b) => b.id === blockId);
-    if (!block || !block.items) return;
-
-    if (block.items.length === 1) {
-      // Convert block to paragraph
-      const updated = blocks.map((b) => {
-        if (b.id === blockId) {
-          return {
-            id: blockId,
-            type: "paragraph" as BlockType,
-            content: "",
-          };
-        }
-        return b;
-      });
-      setBlocks(updated);
-      syncToCloud(updated, noteTitle);
-      setActiveBlockId(blockId);
-
-      setTimeout(() => {
-        inputRefs.current[blockId]?.focus();
-      }, 100);
-    } else {
-      // Remove item and focus previous
-      handleRemoveListItem(blockId, itemIdx);
-    }
-  };
-
-  const handleAddBlock = (type: BlockType) => {
-    if (!canEdit) return;
-
-    const newBlock: EditorBlock = {
-      id: generateUniqueBlockId("b"),
-      type,
-      content: "",
-      ...(type === "bullet-list" ? { items: [""] } : {}),
-    };
-
-    let updated = [...blocks];
-    const activeIdx = blocks.findIndex((b) => b.id === activeBlockId);
-
-    if (activeIdx !== -1) {
-      updated.splice(activeIdx + 1, 0, newBlock);
-    } else {
-      updated.push(newBlock);
-    }
-
-    setBlocks(updated);
-    setActiveBlockId(newBlock.id);
-
-    if (type === "bullet-list") {
-      setTimeout(() => {
-        inputRefs.current[`${newBlock.id}_0`]?.focus();
-      }, 150);
-    } else {
-      setTimeout(() => {
-        inputRefs.current[newBlock.id]?.focus();
-      }, 150);
-    }
-    syncToCloud(updated, noteTitle);
-  };
-
-  const handleDeleteBlock = (blockId: string) => {
-    if (!canEdit) return;
-    if (blocks.length === 1) return; // Keep at least one block
-
-    const updated = blocks.filter((b) => b.id !== blockId);
-    setBlocks(updated);
-    syncToCloud(updated, noteTitle);
-  };
-
-  const handleParagraphBackspace = (blockId: string) => {
-    if (!canEdit) return;
-    if (blocks.length === 1) return;
-
-    const index = blocks.findIndex((b) => b.id === blockId);
-    if (index === -1) return;
-
-    if (index > 0) {
-      const prevBlock = blocks[index - 1];
-
-      if (prevBlock.type === "scripture" || prevBlock.type === "comparison") {
-        // Delete the scripture/comparison block above the current block
-        const updated = blocks.filter((b) => b.id !== prevBlock.id);
-        setBlocks(updated);
-        syncToCloud(updated, noteTitle);
-      } else {
-        // Delete the current empty block and focus the previous block
-        const updated = blocks.filter((b) => b.id !== blockId);
-        setBlocks(updated);
-        syncToCloud(updated, noteTitle);
-
-        setActiveBlockId(prevBlock.id);
-        if (prevBlock.type === "bullet-list" && prevBlock.items) {
-          const lastIdx = prevBlock.items.length - 1;
-          setTimeout(() => {
-            inputRefs.current[`${prevBlock.id}_${lastIdx}`]?.focus();
-          }, 100);
-        } else {
-          setTimeout(() => {
-            inputRefs.current[prevBlock.id]?.focus();
-          }, 100);
-        }
-      }
-    }
-  };
-
-  const handleToggleBlockType = (blockId: string) => {
-    if (!canEdit) return;
-
-    const updated = blocks.map((b) => {
-      if (b.id === blockId) {
-        const nextType: BlockType =
-          b.type === "paragraph" ? "header" : "paragraph";
-        return { ...b, type: nextType };
-      }
-      return b;
-    });
-    setBlocks(updated);
-    syncToCloud(updated, noteTitle);
-  };
-
-  // AI Smart Detection debouncer
-  const triggerAIScriptureDetection = (blockId: string, text: string) => {
-    if (parseDebounceTimeout.current) {
-      clearTimeout(parseDebounceTimeout.current);
-    }
-
-    parseDebounceTimeout.current = setTimeout(async () => {
-      const parsed = parseScriptureRef(text);
-      if (parsed) {
-        // Scripture detected!
-        // Fetch text
-        const chosenTranslation =
-          parsed.translationOverride || user?.globalDefaultTranslation || "ESV";
-        const scripture = await fetchScripture(
-          parsed.standardReference,
-          chosenTranslation,
-        );
-
-        // Remove scripture reference text from the paragraph so it's clean
-        const cleanedText = text.replace(parsed.raw, "").trim();
-
-        const newScriptureBlock: EditorBlock = {
-          id: generateUniqueBlockId("b_scr"),
-          type: "scripture",
-          content: parsed.standardReference,
-          scriptureRef: parsed.standardReference,
-          verseText: scripture.text,
-          translation: chosenTranslation,
-          isCollapsed: false,
-        };
-
-        // Insert scripture block directly below the active paragraph block
-        const index = blocks.findIndex((b) => b.id === blockId);
-        const updated = [...blocks];
-
-        // Update current text block
-        updated[index] = { ...updated[index], content: cleanedText };
-        // Insert scripture card
-        updated.splice(index + 1, 0, newScriptureBlock);
-
-        // Check if there is already a paragraph below
-        const nextBlock = updated[index + 2];
-        let nextBlockId = "";
-        if (!nextBlock || nextBlock.type !== "paragraph") {
-          nextBlockId = generateUniqueBlockId("b");
-          updated.splice(index + 2, 0, {
-            id: nextBlockId,
-            type: "paragraph",
-            content: "",
-          });
-        } else {
-          nextBlockId = nextBlock.id;
-        }
-
-        setBlocks(updated);
-        syncToCloud(updated, noteTitle);
-
-        // Focus the subsequent paragraph block so typing continues uninterrupted
-        setActiveBlockId(nextBlockId);
-        setTimeout(() => {
-          inputRefs.current[nextBlockId]?.focus();
-        }, 150);
-      }
-    }, 1500); // 1.5 seconds debounce
   };
 
   // Manual Scripture Insertion
@@ -477,88 +349,45 @@ export default function SingleNoteEditorScreen() {
     setManualBibleModalVisible(false);
     const startV = parseInt(bibleVerse, 10);
     const endV = parseInt(bibleVerseEnd, 10);
-    const standardRef = resolveStandardReference(
-      bibleBook,
-      parseInt(bibleChapter, 10),
-      startV,
-      endV,
-    );
+    const chap = parseInt(bibleChapter, 10);
+    const standardRef = resolveStandardReference(bibleBook, chap, startV, endV);
     const chosenTranslation = bibleVersion;
+    const usfm = BOOK_NAME_TO_USFM[bibleBook] || "JHN";
 
-    let targetBlock: EditorBlock;
     if (isInsertingComparison) {
-      // Comparison block
+      // Comparison block inserts two version badges side-by-side
       const result1 = await fetchScripture(standardRef, chosenTranslation);
       const result2 = await fetchScripture(standardRef, comparisonVersion);
 
-      targetBlock = {
-        id: generateUniqueBlockId("b_comp"),
-        type: "comparison",
-        content: `${standardRef} Comparison`,
-        scriptureRef: standardRef,
-        comparisons: [
-          { translation: chosenTranslation, text: result1.text },
-          { translation: comparisonVersion, text: result2.text },
-        ],
-      };
+      editorRef.current?.insertScripture({
+        bookUSFM: usfm,
+        chapter: chap,
+        verseStart: startV,
+        verseEnd: endV,
+        translation: chosenTranslation,
+        verseText: result1.text,
+      });
+
+      editorRef.current?.insertScripture({
+        bookUSFM: usfm,
+        chapter: chap,
+        verseStart: startV,
+        verseEnd: endV,
+        translation: comparisonVersion,
+        verseText: result2.text,
+      });
     } else {
       // Collapsible card block
       const result = await fetchScripture(standardRef, chosenTranslation);
 
-      targetBlock = {
-        id: generateUniqueBlockId("b_scr"),
-        type: "scripture",
-        content: standardRef,
-        scriptureRef: standardRef,
-        verseText: result.text,
+      editorRef.current?.insertScripture({
+        bookUSFM: usfm,
+        chapter: chap,
+        verseStart: startV,
+        verseEnd: endV,
         translation: chosenTranslation,
-        isCollapsed: false,
-      };
-    }
-
-    // Insert block inline below the active block, and focus a paragraph below it
-    const activeIdx = blocks.findIndex((b) => b.id === activeBlockId);
-    let updated = [...blocks];
-
-    if (activeIdx !== -1) {
-      updated.splice(activeIdx + 1, 0, targetBlock);
-
-      const nextBlock = updated[activeIdx + 2];
-      let newParagraphId = "";
-      if (!nextBlock || nextBlock.type !== "paragraph") {
-        newParagraphId = generateUniqueBlockId("b");
-        updated.splice(activeIdx + 2, 0, {
-          id: newParagraphId,
-          type: "paragraph",
-          content: "",
-        });
-      } else {
-        newParagraphId = nextBlock.id;
-      }
-
-      setBlocks(updated);
-      syncToCloud(updated, noteTitle);
-
-      setActiveBlockId(newParagraphId);
-      setTimeout(() => {
-        inputRefs.current[newParagraphId]?.focus();
-      }, 150);
-    } else {
-      const newParagraphId = generateUniqueBlockId("b");
-      updated.push(targetBlock);
-      updated.push({
-        id: newParagraphId,
-        type: "paragraph",
-        content: "",
+        verseText: result.text,
       });
-
-      setBlocks(updated);
-      syncToCloud(updated, noteTitle);
-
-      setActiveBlockId(newParagraphId);
-      setTimeout(() => {
-        inputRefs.current[newParagraphId]?.focus();
-      }, 150);
     }
   };
 
@@ -650,7 +479,6 @@ export default function SingleNoteEditorScreen() {
       className="flex-1 bg-background"
       edges={["top", "left", "right"]}
     >
-      {/* IOS-style Header Bar */}
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border/10">
         <Pressable
           onPress={() => router.back()}
@@ -670,7 +498,6 @@ export default function SingleNoteEditorScreen() {
           </AppText>
         </Pressable>
 
-        {/* Dynamic Sync & Share Indicators */}
         <View className="flex-row items-center gap-x-3.5">
           <View className="flex-row items-center">
             {syncStatus === "syncing" ? (
@@ -708,11 +535,7 @@ export default function SingleNoteEditorScreen() {
         className="flex-1"
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        <ScrollView
-          className="flex-1 px-6 pt-4"
-          keyboardShouldPersistTaps="always"
-        >
-          {/* Note Title */}
+        <View className="flex-1 px-6 pt-4">
           <TextInput
             value={noteTitle}
             onChangeText={handleTitleChange}
@@ -722,215 +545,39 @@ export default function SingleNoteEditorScreen() {
             className="text-2xl font-sans font-bold text-foreground mb-4 p-0"
           />
 
-          {/* Note Editor Blocks */}
-          <View className="pb-40">
-            {blocks.map((block) => {
-              if (block.type === "paragraph" || block.type === "header") {
-                return (
-                  <View key={block.id} className="relative group">
-                    <TextInput
-                      ref={(ref) => {
-                        if (ref) {
-                          inputRefs.current[block.id] = ref;
-                        } else {
-                          delete inputRefs.current[block.id];
-                        }
-                      }}
-                      value={block.content}
-                      onChangeText={(txt) =>
-                        handleUpdateBlockText(block.id, txt)
-                      }
-                      onFocus={() => setActiveBlockId(block.id)}
-                      editable={canEdit}
-                      multiline
-                      scrollEnabled={false}
-                      placeholder={
-                        block.type === "header"
-                          ? "Header..."
-                          : "Type notes, reference John 3:16..."
-                      }
-                      placeholderTextColor="hsl(var(--muted-foreground)/60)"
-                      className={cn(
-                        "text-foreground p-0 m-0 font-sans leading-7",
-                        block.type === "header"
-                          ? "text-xl font-bold tracking-tight text-foreground mb-2 mt-2"
-                          : "text-base",
-                        activeBlockId === block.id && "pl-2",
-                      )}
-                      onKeyPress={({ nativeEvent }) => {
-                        if (
-                          nativeEvent.key === "Backspace" &&
-                          block.content === ""
-                        ) {
-                          handleParagraphBackspace(block.id);
-                        }
-                      }}
-                    />
-
-                    {canEdit &&
-                      activeBlockId === block.id &&
-                      block.content === "" &&
-                      blocks.length > 1 && (
-                        <Pressable
-                          onPress={() => handleDeleteBlock(block.id)}
-                          className="absolute right-0 top-0.5 p-1 active:opacity-60"
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={14}
-                            className="text-destructive"
-                            color="red"
-                          />
-                        </Pressable>
-                      )}
-                  </View>
-                );
-              }
-
-              if (block.type === "bullet-list") {
-                return (
-                  <View key={block.id} className="mb-3 pl-2">
-                    {block.items?.map((item, idx) => (
-                      <View key={idx} className="flex-row items-center mb-1.5">
-                        <AppText className="text-[#e4b022] dark:text-[#d4af37] mr-2 text-base">
-                          •
-                        </AppText>
-                        <TextInput
-                          ref={(ref) => {
-                            if (ref) {
-                              inputRefs.current[`${block.id}_${idx}`] = ref;
-                            } else {
-                              delete inputRefs.current[`${block.id}_${idx}`];
-                            }
-                          }}
-                          value={item}
-                          onChangeText={(txt) =>
-                            handleUpdateListItem(block.id, idx, txt)
-                          }
-                          onSubmitEditing={() =>
-                            handleListItemSubmit(block.id, idx)
-                          }
-                          onKeyPress={({ nativeEvent }) => {
-                            if (
-                              nativeEvent.key === "Backspace" &&
-                              item === ""
-                            ) {
-                              handleListItemBackspace(block.id, idx);
-                            }
-                          }}
-                          editable={canEdit}
-                          placeholder="List item..."
-                          placeholderTextColor="hsl(var(--muted-foreground)/50)"
-                          className="flex-1 text-base text-foreground font-sans p-0 m-0 leading-7"
-                        />
-                        {canEdit && (
-                          <View className="flex-row gap-x-2">
-                            <Pressable
-                              onPress={() =>
-                                handleListItemSubmit(block.id, idx)
-                              }
-                              className="p-1 active:opacity-60"
-                            >
-                              <Ionicons
-                                name="add-circle-outline"
-                                size={16}
-                                className="text-[#e4b022] dark:text-[#d4af37]"
-                                color="gold"
-                              />
-                            </Pressable>
-                            {block.items!.length > 1 && (
-                              <Pressable
-                                onPress={() =>
-                                  handleRemoveListItem(block.id, idx)
-                                }
-                                className="p-1 active:opacity-60"
-                              >
-                                <Ionicons
-                                  name="remove-circle-outline"
-                                  size={16}
-                                  className="text-destructive"
-                                  color="red"
-                                />
-                              </Pressable>
-                            )}
-                          </View>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                );
-              }
-
-              if (block.type === "scripture") {
-                return (
-                  <View key={block.id} className="relative mb-2">
-                    <BibleCard
-                      reference={block.scriptureRef || "Bible Reference"}
-                      verseText={block.verseText}
-                      translation={block.translation}
-                      isInitiallyCollapsed={block.isCollapsed}
-                    />
-                    {canEdit && (
-                      <Pressable
-                        onPress={() => handleDeleteBlock(block.id)}
-                        className="absolute right-3 top-3 p-1 bg-black/40 dark:bg-black/60 rounded-full active:opacity-60 z-10"
-                      >
-                        <Ionicons name="close" size={14} color="white" />
-                      </Pressable>
-                    )}
-                  </View>
-                );
-              }
-
-              if (block.type === "comparison") {
-                return (
-                  <View key={block.id} className="relative mb-2">
-                    <BibleComparison
-                      reference={block.scriptureRef || "Bible Reference"}
-                      comparisons={block.comparisons || []}
-                    />
-                    {canEdit && (
-                      <Pressable
-                        onPress={() => handleDeleteBlock(block.id)}
-                        className="absolute right-3 top-3 p-1 bg-black/40 dark:bg-black/60 rounded-full active:opacity-60 z-10"
-                      >
-                        <Ionicons name="close" size={14} color="white" />
-                      </Pressable>
-                    )}
-                  </View>
-                );
-              }
-
-              return null;
-            })}
+          <View className="flex-1">
+            <FaithPadEditor
+              ref={editorRef}
+              initialContent={initialEditorContent}
+              onChange={handleEditorChange}
+              theme={theme}
+            />
           </View>
-        </ScrollView>
+        </View>
 
-        {/* Floating Custom Tool Keyboard Accessory (Apple Notes style) */}
         {canEdit && (
           <View className="flex-row items-center justify-between px-4 py-3 bg-secondary/80 dark:bg-secondary/40 border-t border-border">
             <View className="flex-row gap-x-4">
               <Pressable
-                onPress={() =>
-                  activeBlockId && handleToggleBlockType(activeBlockId)
-                }
-                className="p-1.5 active:opacity-60"
+                onPress={() => editorRef.current?.toggleBold()}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
               >
-                <AppText weight="bold" className="text-foreground text-sm">
-                  Aa
+                <AppText weight="bold" className="text-foreground text-lg">
+                  B
                 </AppText>
               </Pressable>
 
               <Pressable
-                onPress={() => handleAddBlock("bullet-list")}
-                className="p-1.5 active:opacity-60"
+                onPress={() => editorRef.current?.toggleItalic()}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
               >
-                <Ionicons
-                  name="list-outline"
-                  size={20}
-                  className="text-foreground"
-                  color="hsl(var(--foreground))"
-                />
+                <AppText
+                  weight="medium"
+                  style={{ fontStyle: "italic" }}
+                  className="text-foreground text-lg"
+                >
+                  I
+                </AppText>
               </Pressable>
 
               <Pressable
@@ -975,18 +622,6 @@ export default function SingleNoteEditorScreen() {
                 </AppText>
               </Pressable>
             </View>
-
-            <Pressable
-              onPress={() => handleAddBlock("paragraph")}
-              className="p-1.5 active:opacity-60"
-            >
-              <Ionicons
-                name="add-circle"
-                size={24}
-                className="text-[#e4b022] dark:text-[#d4af37]"
-                color="gold"
-              />
-            </Pressable>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -1017,7 +652,6 @@ export default function SingleNoteEditorScreen() {
               </Pressable>
             </View>
 
-            {/* Existing Collaborators List */}
             <AppText
               weight="semibold"
               className="text-sm text-muted-foreground uppercase tracking-widest mb-3"
@@ -1060,7 +694,6 @@ export default function SingleNoteEditorScreen() {
               </View>
             )}
 
-            {/* Share Form */}
             <AppText
               weight="semibold"
               className="text-sm text-muted-foreground uppercase tracking-widest mb-3"
@@ -1174,7 +807,6 @@ export default function SingleNoteEditorScreen() {
             </View>
 
             <ScrollView className="space-y-4">
-              {/* Book Select Dropdown */}
               <Dropdown
                 label="Book"
                 value={bibleBook}
@@ -1185,7 +817,6 @@ export default function SingleNoteEditorScreen() {
                 placeholder="Select Book"
               />
 
-              {/* Chapter Select Dropdown */}
               <Dropdown
                 label="Chapter"
                 value={bibleChapter}
@@ -1194,7 +825,6 @@ export default function SingleNoteEditorScreen() {
                 placeholder="Select Chapter"
               />
 
-              {/* Start & End Verse Dropdowns */}
               <View className="flex-row gap-x-4 mb-4">
                 <View className="flex-1">
                   <Dropdown
@@ -1217,7 +847,6 @@ export default function SingleNoteEditorScreen() {
                 </View>
               </View>
 
-              {/* Translation Versions Select */}
               <View className="mb-4">
                 <AppText
                   weight="semibold"
@@ -1252,7 +881,6 @@ export default function SingleNoteEditorScreen() {
                 </View>
               </View>
 
-              {/* Comparison Version Select (only if comparing) */}
               {isInsertingComparison && (
                 <View className="mb-6">
                   <AppText

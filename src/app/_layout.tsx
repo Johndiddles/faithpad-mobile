@@ -48,7 +48,6 @@ function RootLayoutNav() {
     };
   }, []);
 
-  // Auth gate navigation redirect
   useEffect(() => {
     if (!isHydrated) return;
 
@@ -57,7 +56,6 @@ function RootLayoutNav() {
     const inPublicGroup = routeSegments[0] === "(public)";
 
     if (!token && inAuthGroup) {
-      // Redirect unauthenticated user to onboarding
       router.replace("/welcome");
       SplashScreen.hideAsync().catch(() => {});
     } else if (
@@ -66,17 +64,12 @@ function RootLayoutNav() {
         routeSegments.length === 0 ||
         routeSegments[0] === "index")
     ) {
-      // Redirect authenticated user to folders list
       router.replace("/folders");
       SplashScreen.hideAsync().catch(() => {});
     } else {
-      // Hide splash screen once we are on the correct route
-      console.log("the else block");
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [token, segments, isHydrated, router]);
-
-  console.log({ isHydrated, token, segments });
 
   if (!isHydrated) {
     return (
