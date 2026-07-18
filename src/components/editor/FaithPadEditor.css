@@ -1,0 +1,410 @@
+/* Faith Pad Lexical Editor Core Stylesheet */
+
+:root {
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.theme-light {
+  --editor-bg: #FAF8F5;          /* Warm cream/paper background */
+  --editor-text: #2C2A29;        /* Soft charcoal body text */
+  --editor-accent: #B8860B;      /* Theological warm gold */
+  --editor-accent-hover: #9B7008;
+  --editor-border: #E8E5DD;      /* Subtle border */
+  --editor-selection: rgba(212, 175, 55, 0.25); /* Gold selection */
+  --editor-placeholder: rgba(44, 42, 41, 0.4);
+  
+  /* Floating Toolbar */
+  --tb-bg: rgba(250, 248, 245, 0.9);
+  --tb-border: rgba(224, 219, 209, 0.8);
+  --tb-shadow: 0 4px 20px -2px rgba(90, 80, 70, 0.15), 0 2px 8px -1px rgba(90, 80, 70, 0.1);
+  --tb-btn-hover: rgba(232, 229, 221, 0.8);
+  --tb-btn-active: rgba(220, 216, 206, 0.9);
+  --tb-btn-text: #4A4644;
+  --tb-btn-text-active: #B8860B;
+  
+  /* Scripture Node Badge (Collapsed) */
+  --badge-bg: #F0EDE6;
+  --badge-border: #E2DDD5;
+  --badge-text: #6A6259;
+  --badge-icon: #B8860B;
+  --badge-hover-bg: #E8E4D9;
+  
+  /* Scripture Node Card (Expanded) */
+  --expanded-bg: #FAF8F5;
+  --expanded-border: #D4AF37;   /* Bright gold left accent */
+  --expanded-card-bg: rgba(240, 240, 235, 0.4);
+  --expanded-text: #3E3B3A;
+  --expanded-translation: #8C847A;
+}
+
+.theme-dark {
+  --editor-bg: #121212;          /* Very low glare charcoal */
+  --editor-text: #E5E5EA;        /* Soft off-white */
+  --editor-accent: #D4AF37;      /* Theological gold */
+  --editor-accent-hover: #E8C14D;
+  --editor-border: #2C2C2E;      /* Soft dark border */
+  --editor-selection: rgba(212, 175, 55, 0.35); /* Gold selection */
+  --editor-placeholder: rgba(229, 229, 234, 0.4);
+  
+  /* Floating Toolbar */
+  --tb-bg: rgba(28, 28, 30, 0.9);
+  --tb-border: rgba(58, 58, 60, 0.8);
+  --tb-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 2px 10px -1px rgba(0, 0, 0, 0.3);
+  --tb-btn-hover: rgba(44, 44, 46, 0.8);
+  --tb-btn-active: rgba(58, 58, 60, 0.9);
+  --tb-btn-text: #AEAEB2;
+  --tb-btn-text-active: #D4AF37;
+  
+  /* Scripture Node Badge (Collapsed) */
+  --badge-bg: #2C2C2E;
+  --badge-border: #3A3A3C;
+  --badge-text: #C7A26B;
+  --badge-icon: #D4AF37;
+  --badge-hover-bg: #3A3A3C;
+  
+  /* Scripture Node Card (Expanded) */
+  --expanded-bg: #1C1C1E;
+  --expanded-border: #D4AF37;   /* Gold left accent */
+  --expanded-card-bg: rgba(44, 44, 46, 0.3);
+  --expanded-text: #E5E5EA;
+  --expanded-translation: #8E8E93;
+}
+
+/* Base resets & layout */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--editor-bg);
+  color: var(--editor-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Editor Container */
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--editor-bg);
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scrollable area */
+.editor-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 80px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Content Editable Canvas */
+.editor-input {
+  flex: 1;
+  outline: none;
+  font-size: 17px;
+  line-height: 1.65;
+  tab-size: 4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  caret-color: var(--editor-accent);
+  min-height: 150px;
+}
+
+.editor-input::selection,
+.editor-input *::selection {
+  background-color: var(--editor-selection) !important;
+}
+
+/* Custom placeholder styling */
+.editor-placeholder {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  font-size: 17px;
+  color: var(--editor-placeholder);
+  pointer-events: none;
+  line-height: 1.65;
+  user-select: none;
+  font-family: var(--font-sans);
+}
+
+/* Typographic Elements styling inside Lexical */
+.editor-input p {
+  margin: 0 0 12px 0;
+}
+
+.editor-input p:last-child {
+  margin-bottom: 0;
+}
+
+.editor-input h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 12px 0 16px 0;
+  letter-spacing: -0.015em;
+  color: var(--editor-text);
+}
+
+.editor-input h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 16px 0 12px 0;
+  letter-spacing: -0.01em;
+}
+
+.editor-input ul, .editor-input ol {
+  margin: 0 0 16px 24px;
+  padding: 0;
+}
+
+.editor-input li {
+  margin: 4px 0;
+}
+
+/* Standard inline styling text decorators */
+.editor-text-bold {
+  font-weight: 700;
+}
+
+.editor-text-italic {
+  font-style: italic;
+}
+
+/* Floating Toolbar */
+.floating-toolbar {
+  position: absolute;
+  z-index: 1000;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--tb-bg);
+  border: 1px solid var(--tb-border);
+  box-shadow: var(--tb-shadow);
+  border-radius: 12px;
+  padding: 6px 8px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  transform: scale(0.95) translateY(5px);
+  pointer-events: none;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-toolbar.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+
+/* Toolbar Divider */
+.tb-divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--tb-border);
+  margin: 0 4px;
+}
+
+/* Toolbar Buttons */
+.tb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--tb-btn-text);
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tb-btn:hover {
+  background-color: var(--tb-btn-hover);
+}
+
+.tb-btn:active {
+  background-color: var(--tb-btn-active);
+}
+
+.tb-btn.active {
+  color: var(--tb-btn-text-active);
+  background-color: var(--tb-btn-hover);
+}
+
+/* Color Dropdown & Custom Color Pickers */
+.tb-color-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tb-color-palette {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background-color: var(--tb-bg);
+  border: 1px solid var(--tb-border);
+  box-shadow: var(--tb-shadow);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  z-index: 1001;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.tb-color-palette.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+.color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+
+.color-dot:hover {
+  transform: scale(1.15);
+}
+
+.color-dot.active {
+  border-color: var(--editor-accent);
+}
+
+/* Scripture Node Collapsed Badge */
+.scripture-badge-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--badge-bg);
+  border: 1px solid var(--badge-border);
+  color: var(--badge-text);
+  padding: 2.5px 9px;
+  border-radius: 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  vertical-align: middle;
+  margin: 0 4px;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.1s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.scripture-badge-inline:hover {
+  background-color: var(--badge-hover-bg);
+  transform: translateY(-0.5px);
+}
+
+.scripture-badge-inline:active {
+  transform: translateY(0.5px);
+}
+
+.scripture-icon-bible {
+  font-size: 13px;
+}
+
+.scripture-icon-arrow {
+  font-size: 10px;
+  color: var(--badge-icon);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-block;
+}
+
+.scripture-icon-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+/* Scripture Node Expanded Card */
+.scripture-card-expanded {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  background-color: var(--expanded-card-bg);
+  border-left: 3px solid var(--expanded-border);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  margin: 10px 0;
+  box-sizing: border-box;
+  cursor: default;
+  user-select: text;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.scripture-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.scripture-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--editor-accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.scripture-card-toggle {
+  background: transparent;
+  border: none;
+  color: var(--badge-text);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.scripture-card-toggle:hover {
+  background-color: var(--tb-btn-hover);
+}
+
+.scripture-card-text {
+  font-family: var(--font-serif);
+  font-size: 15.5px;
+  line-height: 1.6;
+  font-style: italic;
+  color: var(--expanded-text);
+  margin: 0;
+}
+
+.scripture-card-translation {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--expanded-translation);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 6px;
+  display: block;
+}
