@@ -5,6 +5,10 @@ import FaithPadEditorDom from "./FaithPadEditorDom";
 export interface FaithPadEditorRef {
   toggleBold: () => void;
   toggleItalic: () => void;
+  toggleUnderline: () => void;
+  toggleStrikethrough: () => void;
+  toggleBulletList: () => void;
+  toggleOrderedList: () => void;
   setTextColor: (color: string) => void;
   setHighlightColor: (color: string) => void;
   insertScripture: (scripture: {
@@ -46,6 +50,18 @@ export const FaithPadEditor = forwardRef<
     },
     toggleItalic: () => {
       setEditorCommand({ id: Math.random().toString(), type: "italic" });
+    },
+    toggleUnderline: () => {
+      setEditorCommand({ id: Math.random().toString(), type: "underline" });
+    },
+    toggleStrikethrough: () => {
+      setEditorCommand({ id: Math.random().toString(), type: "strikethrough" });
+    },
+    toggleBulletList: () => {
+      setEditorCommand({ id: Math.random().toString(), type: "bullet-list" });
+    },
+    toggleOrderedList: () => {
+      setEditorCommand({ id: Math.random().toString(), type: "ordered-list" });
     },
     setTextColor: (color: string) => {
       setEditorCommand({

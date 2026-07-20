@@ -15,7 +15,13 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { HeadingNode } from "@lexical/rich-text";
-import { ListNode, ListItemNode } from "@lexical/list";
+import {
+  ListNode,
+  ListItemNode,
+  INSERT_UNORDERED_LIST_COMMAND,
+  INSERT_ORDERED_LIST_COMMAND,
+} from "@lexical/list";
+import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import {
   FORMAT_TEXT_COMMAND,
   $getSelection,
@@ -207,6 +213,18 @@ function CommandPlugin({ command }: CommandPluginProps) {
           break;
         case "italic":
           editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+          break;
+        case "underline":
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
+          break;
+        case "strikethrough":
+          editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
+          break;
+        case "bullet-list":
+          editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
+          break;
+        case "ordered-list":
+          editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
           break;
         case "text-color":
           editor.update(() => {
@@ -533,6 +551,9 @@ export default function FaithPadEditorDom({
       text: {
         bold: "editor-text-bold",
         italic: "editor-text-italic",
+        underline: "editor-text-underline",
+        strikethrough: "editor-text-strikethrough",
+        underlineStrikethrough: "editor-text-underline-strikethrough",
       },
     },
     nodes: [ScriptureNode, ComparisonNode, HeadingNode, ListNode, ListItemNode],
@@ -567,6 +588,7 @@ export default function FaithPadEditorDom({
             />
           </div>
           <HistoryPlugin />
+          <ListPlugin />
           <InitialContentPlugin content={initialContent} />
           {onChange && <OnChangePlugin onChange={handleEditorChange} />}
           <BridgePlugin registerApi={registerApi} />

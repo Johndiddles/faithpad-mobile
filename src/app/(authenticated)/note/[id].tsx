@@ -33,78 +33,7 @@ import {
   FaithPadEditor,
   FaithPadEditorRef,
 } from "@/components/editor/FaithPadEditor";
-
-const BOOK_NAME_TO_USFM: Record<string, string> = {
-  Genesis: "GEN",
-  Exodus: "EXD",
-  Leviticus: "LEV",
-  Numbers: "NUM",
-  Deuteronomy: "DEU",
-  Joshua: "JOS",
-  Judges: "JDG",
-  Ruth: "RUT",
-  "1 Samuel": "1SA",
-  "2 Samuel": "2SA",
-  "1 Kings": "1KI",
-  "2 Kings": "2KI",
-  "1 Chronicles": "1CH",
-  "2 Chronicles": "2CH",
-  Ezra: "EZR",
-  Nehemiah: "NEH",
-  Esther: "EST",
-  Job: "JOB",
-  Psalm: "PSA",
-  Psalms: "PSA",
-  Proverbs: "PRO",
-  Ecclesiastes: "ECC",
-  "Song of Solomon": "SNG",
-  Isaiah: "ISA",
-  Jeremiah: "JER",
-  Lamentations: "LAM",
-  Ezekiel: "EZK",
-  Daniel: "DAN",
-  Hosea: "HOS",
-  Joel: "JOL",
-  Amos: "AMO",
-  Obadiah: "OBA",
-  Jonah: "JON",
-  Micah: "MIC",
-  Nahum: "NAM",
-  Habakkuk: "HAB",
-  Zephaniah: "ZEP",
-  Haggai: "HAG",
-  Zechariah: "ZEC",
-  Malachi: "MAL",
-  Matthew: "MAT",
-  Mark: "MRK",
-  Luke: "LUK",
-  John: "JHN",
-  Acts: "ACT",
-  Romans: "ROM",
-  "1 Corinthians": "1CO",
-  "2 Corinthians": "2CO",
-  Galatians: "GAL",
-  Ephesians: "EPH",
-  Philippians: "PHP",
-  Colossians: "COL",
-  "1 Thessalonians": "1TH",
-  "2 Thessalonians": "2TH",
-  "1 Timothy": "1TI",
-  "2 Timothy": "2TI",
-  Titus: "TIT",
-  Philemon: "PHM",
-  Hebrews: "HEB",
-  James: "JAS",
-  "1 Peter": "1PE",
-  "2 Peter": "2PE",
-  "1 John": "1JN",
-  "2 John": "2JN",
-  "3 John": "3JN",
-  Jude: "JUD",
-  Revelation: "REV",
-};
-
-const EMPTY_LEXICAL_STATE = `{"root":{"children":[{"children":[],"direction":"ltr","format":"","indent":0,"type":"paragraph","version":1}],"direction":"ltr","format":"","indent":0,"type":"root","version":1}}`;
+import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
 
 function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
   if (oldBlocks.length === 1 && oldBlocks[0].content.startsWith('{"root":')) {
@@ -270,6 +199,8 @@ export default function SingleNoteEditorScreen() {
   // const [shareModalVisible, setShareModalVisible] = useState(false);
   const [manualBibleModalVisible, setManualBibleModalVisible] = useState(false);
   const [insertModalVisible, setInsertModalVisible] = useState(false);
+  const [textColorModalVisible, setTextColorModalVisible] = useState(false);
+  const [highlightColorModalVisible, setHighlightColorModalVisible] = useState(false);
 
   // Scripture Selection state
   const [bibleBook, setBibleBook] = useState("John");
@@ -284,6 +215,28 @@ export default function SingleNoteEditorScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === "dark" ? "dark" : "light";
   const editorRef = useRef<FaithPadEditorRef>(null);
+
+  const textColors = theme === "dark" ? [
+    { name: "Default", value: "inherit" },
+    { name: "Red", value: "#EC7063" },
+    { name: "Gold", value: "#D4AF37" },
+    { name: "Green", value: "#58D68D" },
+    { name: "Blue", value: "#5DADE2" },
+  ] : [
+    { name: "Default", value: "inherit" },
+    { name: "Red", value: "#C0392B" },
+    { name: "Gold", value: "#B8860B" },
+    { name: "Green", value: "#27AE60" },
+    { name: "Blue", value: "#2980B9" },
+  ];
+
+  const highlightColors = [
+    { name: "Clear", value: "transparent" },
+    { name: "Gold", value: "rgba(212, 175, 55, 0.3)" },
+    { name: "Green", value: "rgba(46, 204, 113, 0.3)" },
+    { name: "Blue", value: "rgba(52, 152, 219, 0.3)" },
+    { name: "Red", value: "rgba(231, 76, 60, 0.3)" },
+  ];
   const initialEditorContent = React.useMemo(() => {
     return migrateBlocksToLexical(note?.blocks || []);
   }, [note?.blocks]);
@@ -632,8 +585,31 @@ export default function SingleNoteEditorScreen() {
         </View>
 
         {canEdit && (
-          <View className="flex-row items-center justify-between px-4 py-3 bg-secondary/80 dark:bg-secondary/40 border-t border-border">
-            <View className="flex-row gap-x-4">
+          <View className="flex-row items-center px-4 py-2.5 bg-secondary/85 dark:bg-secondary/40 border-t border-border">
+            {/* Docked Insert/Attachment Button on the Left */}
+            <Pressable
+              onPress={() => setInsertModalVisible(true)}
+              className="p-1.5 pr-3 border-r border-border/80 active:opacity-60 justify-center items-center"
+            >
+              <Entypo
+                name="attachment"
+                size={16}
+                color={theme === "dark" ? "#d4af37" : "#e4b022"}
+              />
+            </Pressable>
+
+            {/* Scrollable Formatting Options on the Right */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                alignItems: "center",
+                paddingLeft: 12,
+                paddingRight: 8,
+                columnGap: 16,
+              }}
+            >
+              {/* Bold */}
               <Pressable
                 onPress={() => editorRef.current?.toggleBold()}
                 className="w-8 h-8 justify-center items-center rounded active:bg-muted"
@@ -643,6 +619,7 @@ export default function SingleNoteEditorScreen() {
                 </AppText>
               </Pressable>
 
+              {/* Italic */}
               <Pressable
                 onPress={() => editorRef.current?.toggleItalic()}
                 className="w-8 h-8 justify-center items-center rounded active:bg-muted"
@@ -656,13 +633,86 @@ export default function SingleNoteEditorScreen() {
                 </AppText>
               </Pressable>
 
+              {/* Underline */}
               <Pressable
-                onPress={() => setInsertModalVisible(true)}
-                className="flex-row items-center gap-x-1.5 p-1 px-3 py-1 "
+                onPress={() => editorRef.current?.toggleUnderline()}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
               >
-                <Entypo name="attachment" size={16} />
+                <AppText
+                  weight="medium"
+                  style={{ textDecorationLine: "underline" }}
+                  className="text-foreground text-lg"
+                >
+                  U
+                </AppText>
               </Pressable>
-            </View>
+
+              {/* Strikethrough */}
+              <Pressable
+                onPress={() => editorRef.current?.toggleStrikethrough()}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+              >
+                <AppText
+                  weight="medium"
+                  style={{ textDecorationLine: "line-through" }}
+                  className="text-foreground text-lg"
+                >
+                  S
+                </AppText>
+              </Pressable>
+
+              {/* Bullet List */}
+              <Pressable
+                onPress={() => editorRef.current?.toggleBulletList()}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+              >
+                <Ionicons
+                  name="list-outline"
+                  size={20}
+                  color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
+                />
+              </Pressable>
+
+              {/* Ordered List */}
+              <Pressable
+                onPress={() => editorRef.current?.toggleOrderedList()}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+              >
+                <Ionicons
+                  name="list-circle-outline"
+                  size={21}
+                  color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
+                />
+              </Pressable>
+
+              {/* Text Color */}
+              <Pressable
+                onPress={() => setTextColorModalVisible(true)}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+              >
+                <View className="items-center justify-center">
+                  <AppText
+                    weight="bold"
+                    className="text-foreground text-[15px] leading-none"
+                  >
+                    A
+                  </AppText>
+                  <View className="w-4 h-[3px] bg-[#e4b022] dark:bg-[#d4af37] rounded-sm mt-0.5" />
+                </View>
+              </Pressable>
+
+              {/* Highlight Color */}
+              <Pressable
+                onPress={() => setHighlightColorModalVisible(true)}
+                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+              >
+                <Ionicons
+                  name="brush-outline"
+                  size={18}
+                  color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                />
+              </Pressable>
+            </ScrollView>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -831,6 +881,128 @@ export default function SingleNoteEditorScreen() {
                   </View>
                 </View>
               </View> */}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Text Color Selection Drawer */}
+      <Modal
+        visible={textColorModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTextColorModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-card rounded-t-3xl p-6 border-t border-border pb-10">
+            <View className="flex-row justify-between items-center mb-6">
+              <AppText weight="bold" className="text-xl">
+                Text Color
+              </AppText>
+              <Pressable
+                onPress={() => setTextColorModalVisible(false)}
+                className="p-1.5"
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  className="text-foreground"
+                  color={theme === "dark" ? "#ffffff" : "#000000"}
+                />
+              </Pressable>
+            </View>
+
+            <View className="flex-row justify-around items-center">
+              {textColors.map((color) => (
+                <Pressable
+                  key={color.name}
+                  onPress={() => {
+                    editorRef.current?.setTextColor(color.value);
+                    setTextColorModalVisible(false);
+                  }}
+                  className="items-center active:opacity-60"
+                >
+                  <View
+                    className={`w-12 h-12 rounded-full justify-center items-center border border-border shadow-sm ${
+                      color.value === "inherit" ? "bg-secondary/45" : ""
+                    }`}
+                    style={{
+                      backgroundColor:
+                        color.value === "inherit" ? "transparent" : color.value,
+                    }}
+                  >
+                    {color.value === "inherit" && (
+                      <AppText className="text-xs font-bold text-foreground">
+                        Default
+                      </AppText>
+                    )}
+                  </View>
+                  <AppText className="text-xs text-muted-foreground mt-2 font-medium">
+                    {color.name}
+                  </AppText>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Highlight Color Selection Drawer */}
+      <Modal
+        visible={highlightColorModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setHighlightColorModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-card rounded-t-3xl p-6 border-t border-border pb-10">
+            <View className="flex-row justify-between items-center mb-6">
+              <AppText weight="bold" className="text-xl">
+                Highlight Color
+              </AppText>
+              <Pressable
+                onPress={() => setHighlightColorModalVisible(false)}
+                className="p-1.5"
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  className="text-foreground"
+                  color={theme === "dark" ? "#ffffff" : "#000000"}
+                />
+              </Pressable>
+            </View>
+
+            <View className="flex-row justify-around items-center">
+              {highlightColors.map((color) => (
+                <Pressable
+                  key={color.name}
+                  onPress={() => {
+                    editorRef.current?.setHighlightColor(color.value);
+                    setHighlightColorModalVisible(false);
+                  }}
+                  className="items-center active:opacity-60"
+                >
+                  <View
+                    className={`w-12 h-12 rounded-full justify-center items-center border border-border shadow-sm overflow-hidden ${
+                      color.value === "transparent" ? "bg-secondary/45" : ""
+                    }`}
+                    style={{
+                      backgroundColor:
+                        color.value === "transparent"
+                          ? "transparent"
+                          : color.value,
+                    }}
+                  >
+                    {color.value === "transparent" && (
+                      <View className="w-12 h-[2px] bg-destructive rotate-45" />
+                    )}
+                  </View>
+                  <AppText className="text-xs text-muted-foreground mt-2 font-medium">
+                    {color.name}
+                  </AppText>
+                </Pressable>
+              ))}
             </View>
           </View>
         </View>
