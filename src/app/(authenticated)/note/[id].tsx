@@ -21,11 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNotesStore, useAuthStore } from "../../../store";
 import { EditorBlock, BlockType } from "../../../lib/types";
+import { parseScriptureRef } from "../../../lib/bible";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  parseScriptureRef,
-  fetchScripture,
-  resolveStandardReference,
-} from "../../../lib/bible";
+  fetchBiblePassage,
+  useBibleVersionsQuery,
+} from "../../../services/youversion";
 import { cn } from "@/lib/utils";
 import { Dropdown } from "@/components/ui/dropdown";
 import { BIBLE_METADATA } from "../../../lib/bible-metadata";
@@ -230,6 +231,7 @@ export default function SingleNoteEditorScreen() {
   const { notes, updateNote, noteShares, shareNote, removeShare } =
     useNotesStore();
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const note = notes.find((n) => n.id === noteId);
 
@@ -247,12 +249,8 @@ export default function SingleNoteEditorScreen() {
   const [bibleChapter, setBibleChapter] = useState("3");
   const [bibleVerse, setBibleVerse] = useState("16");
   const [bibleVerseEnd, setBibleVerseEnd] = useState("16");
-  const [bibleVersion, setBibleVersion] = useState<
-    "ESV" | "NIV" | "NLT" | "AMP" | "KJV"
-  >("ESV");
-  const [comparisonVersion, setComparisonVersion] = useState<
-    "ESV" | "NIV" | "NLT" | "AMP" | "KJV"
-  >("AMP");
+  const [bibleVersion, setBibleVersion] = useState<string>("ESV");
+  const [comparisonVersion, setComparisonVersion] = useState<string>("AMP");
   const [isInsertingComparison, setIsInsertingComparison] = useState(false);
 
   // Theme & Lexical Editor State Refs
@@ -286,6 +284,28 @@ export default function SingleNoteEditorScreen() {
       }
     },
   });
+
+  const { data: versionsData } = useBibleVersionsQuery();
+
+  // Set default bible version based on user preference or first item
+  React.useEffect(() => {
+    if (user?.globalDefaultTranslation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBibleVersion(user.globalDefaultTranslation);
+    } else if (versionsData && versionsData.length > 0) {
+      setBibleVersion(versionsData[0].abbreviation);
+    }
+  }, [user?.globalDefaultTranslation, versionsData]);
+
+  React.useEffect(() => {
+    if (versionsData && versionsData.length > 1) {
+      const other = versionsData.find((v) => v.abbreviation !== bibleVersion);
+      if (other) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setComparisonVersion(other.abbreviation);
+      }
+    }
+  }, [versionsData, bibleVersion]);
 
   if (!note) {
     return (
@@ -346,49 +366,80 @@ export default function SingleNoteEditorScreen() {
 
   // Manual Scripture Insertion
   const handleInsertManualScripture = async () => {
-    setManualBibleModalVisible(false);
     const startV = parseInt(bibleVerse, 10);
     const endV = parseInt(bibleVerseEnd, 10);
     const chap = parseInt(bibleChapter, 10);
-    const standardRef = resolveStandardReference(bibleBook, chap, startV, endV);
     const chosenTranslation = bibleVersion;
     const usfm = BOOK_NAME_TO_USFM[bibleBook] || "JHN";
 
-    if (isInsertingComparison) {
-      // Comparison block inserts two version badges side-by-side
-      const result1 = await fetchScripture(standardRef, chosenTranslation);
-      const result2 = await fetchScripture(standardRef, comparisonVersion);
+    setManualBibleModalVisible(false);
 
-      editorRef.current?.insertScripture({
-        bookUSFM: usfm,
-        chapter: chap,
-        verseStart: startV,
-        verseEnd: endV,
-        translation: chosenTranslation,
-        verseText: result1.text,
+    const fetchSingle = async (trans: string) => {
+      return queryClient.fetchQuery({
+        queryKey: ["biblePassage", trans, usfm, chap, startV, endV],
+        queryFn: () => fetchBiblePassage(trans, usfm, chap, startV, endV),
+        staleTime: 1000 * 60 * 60 * 24, // 24 hours
       });
+    };
 
-      editorRef.current?.insertScripture({
-        bookUSFM: usfm,
-        chapter: chap,
-        verseStart: startV,
-        verseEnd: endV,
-        translation: comparisonVersion,
-        verseText: result2.text,
-      });
-    } else {
-      // Collapsible card block
-      const result = await fetchScripture(standardRef, chosenTranslation);
+    const executeFetch = async () => {
+      try {
+        if (isInsertingComparison) {
+          // Comparison block inserts two version badges side-by-side
+          const [result1, result2] = await Promise.all([
+            fetchSingle(chosenTranslation),
+            fetchSingle(comparisonVersion),
+          ]);
 
-      editorRef.current?.insertScripture({
-        bookUSFM: usfm,
-        chapter: chap,
-        verseStart: startV,
-        verseEnd: endV,
-        translation: chosenTranslation,
-        verseText: result.text,
-      });
-    }
+          editorRef.current?.insertScripture({
+            bookUSFM: usfm,
+            chapter: chap,
+            verseStart: startV,
+            verseEnd: endV,
+            translation: chosenTranslation,
+            verseText: result1.text,
+          });
+
+          editorRef.current?.insertScripture({
+            bookUSFM: usfm,
+            chapter: chap,
+            verseStart: startV,
+            verseEnd: endV,
+            translation: comparisonVersion,
+            verseText: result2.text,
+          });
+        } else {
+          // Collapsible card block
+          const result = await fetchSingle(chosenTranslation);
+
+          editorRef.current?.insertScripture({
+            bookUSFM: usfm,
+            chapter: chap,
+            verseStart: startV,
+            verseEnd: endV,
+            translation: chosenTranslation,
+            verseText: result.text,
+          });
+        }
+      } catch (err: any) {
+        console.error("Failed to insert scripture manually:", err);
+        Alert.alert(
+          "Scripture Fetch Failed",
+          `Could not fetch the bible passage from YouVersion REST API. ${err?.message || ""}`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Retry",
+              onPress: () => {
+                executeFetch();
+              },
+            },
+          ],
+        );
+      }
+    };
+
+    await executeFetch();
   };
 
   // Share handlers
@@ -404,13 +455,18 @@ export default function SingleNoteEditorScreen() {
 
   const sharedUsers = noteShares.filter((s) => s.noteId === note.id);
 
-  const TRANSLATIONS: ("ESV" | "NIV" | "NLT" | "AMP" | "KJV")[] = [
-    "ESV",
-    "NIV",
-    "NLT",
-    "AMP",
-    "KJV",
-  ];
+  const versionOptions = versionsData
+    ? versionsData.map((v) => ({
+        label: `${v.abbreviation} - ${v.name}`,
+        value: v.abbreviation,
+      }))
+    : [
+        { label: "ESV", value: "ESV" },
+        { label: "NIV", value: "NIV" },
+        { label: "NLT", value: "NLT" },
+        { label: "AMP", value: "AMP" },
+        { label: "KJV", value: "KJV" },
+      ];
 
   // Book Options
   const bookOptions = BIBLE_METADATA.map((meta) => ({
@@ -848,74 +904,26 @@ export default function SingleNoteEditorScreen() {
               </View>
 
               <View className="mb-4">
-                <AppText
-                  weight="semibold"
-                  className="text-xs text-muted-foreground uppercase mb-2 tracking-wider"
-                >
-                  {isInsertingComparison ? "Base Translation" : "Version"}
-                </AppText>
-                <View className="flex-row gap-2">
-                  {TRANSLATIONS.map((version) => (
-                    <Pressable
-                      key={version}
-                      onPress={() => setBibleVersion(version)}
-                      className={cn(
-                        "flex-1 py-2 rounded-lg border items-center",
-                        bibleVersion === version
-                          ? "bg-[#e4b022] dark:bg-[#d4af37] border-[#e4b022] dark:border-[#d4af37]"
-                          : "bg-secondary/40 border-border",
-                      )}
-                    >
-                      <AppText
-                        weight="semibold"
-                        className={
-                          bibleVersion === version
-                            ? "text-white dark:text-black"
-                            : "text-foreground"
-                        }
-                      >
-                        {version}
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
+                <Dropdown
+                  label={isInsertingComparison ? "Base Translation" : "Version"}
+                  value={bibleVersion}
+                  options={versionOptions}
+                  onSelect={setBibleVersion}
+                  placeholder="Select Version"
+                />
               </View>
 
               {isInsertingComparison && (
                 <View className="mb-6">
-                  <AppText
-                    weight="semibold"
-                    className="text-xs text-muted-foreground uppercase mb-2 tracking-wider"
-                  >
-                    Compare With
-                  </AppText>
-                  <View className="flex-row gap-2">
-                    {TRANSLATIONS.map((version) => (
-                      <Pressable
-                        key={version}
-                        disabled={bibleVersion === version}
-                        onPress={() => setComparisonVersion(version)}
-                        className={cn(
-                          "flex-1 py-2 rounded-lg border items-center",
-                          comparisonVersion === version
-                            ? "bg-[#e4b022] dark:bg-[#d4af37] border-[#e4b022] dark:border-[#d4af37]"
-                            : "bg-secondary/40 border-border",
-                          bibleVersion === version && "opacity-25",
-                        )}
-                      >
-                        <AppText
-                          weight="semibold"
-                          className={
-                            comparisonVersion === version
-                              ? "text-white dark:text-black"
-                              : "text-foreground"
-                          }
-                        >
-                          {version}
-                        </AppText>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <Dropdown
+                    label="Compare With"
+                    value={comparisonVersion}
+                    options={versionOptions.filter(
+                      (opt) => opt.value !== bibleVersion,
+                    )}
+                    onSelect={setComparisonVersion}
+                    placeholder="Select Version to Compare"
+                  />
                 </View>
               )}
 

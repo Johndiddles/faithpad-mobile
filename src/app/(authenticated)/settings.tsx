@@ -15,6 +15,8 @@ import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore, useNotesStore } from "../../store";
+import { Dropdown } from "@/components/ui/dropdown";
+import { useBibleVersionsQuery } from "../../services/youversion";
 
 const profileSchema = z.object({
   displayName: z
@@ -64,7 +66,7 @@ export default function SettingsScreen() {
   };
 
   const handleUpdateTranslation = (
-    translation: "ESV" | "NIV" | "NLT" | "AMP" | "KJV",
+    translation: string,
   ) => {
     updateSettings(translation, user?.aiDetectionEnabled !== false);
   };
@@ -127,13 +129,19 @@ export default function SettingsScreen() {
     }
   };
 
-  const TRANSLATIONS: ("ESV" | "NIV" | "NLT" | "AMP" | "KJV")[] = [
-    "ESV",
-    "NIV",
-    "NLT",
-    "AMP",
-    "KJV",
-  ];
+  const { data: versionsData } = useBibleVersionsQuery();
+  const versionOptions = versionsData
+    ? versionsData.map((v) => ({
+        label: `${v.abbreviation} - ${v.name}`,
+        value: v.abbreviation,
+      }))
+    : [
+        { label: "ESV", value: "ESV" },
+        { label: "NIV", value: "NIV" },
+        { label: "NLT", value: "NLT" },
+        { label: "AMP", value: "AMP" },
+        { label: "KJV", value: "KJV" },
+      ];
 
   return (
     <SafeAreaView
@@ -223,29 +231,12 @@ export default function SettingsScreen() {
             >
               Default Bible Translation
             </AppText>
-            <View className="flex-row gap-x-1.5">
-              {TRANSLATIONS.map((trans) => {
-                const isSelected = user?.globalDefaultTranslation === trans;
-                return (
-                  <Pressable
-                    key={trans}
-                    onPress={() => handleUpdateTranslation(trans)}
-                    className={`flex-1 py-2.5 rounded-lg border items-center justify-center ${
-                      isSelected
-                        ? "bg-[#e4b022] dark:bg-[#d4af37] border-[#e4b022] dark:border-[#d4af37]"
-                        : "bg-card border-border active:bg-secondary/40"
-                    }`}
-                  >
-                    <AppText
-                      weight="bold"
-                      className={`text-xs ${isSelected ? "text-white dark:text-black" : "text-foreground"}`}
-                    >
-                      {trans}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <Dropdown
+              value={user?.globalDefaultTranslation || "ESV"}
+              options={versionOptions}
+              onSelect={handleUpdateTranslation}
+              placeholder="Select Default Version"
+            />
           </View>
 
           {/* AI Smart Scripture Detection Toggle */}

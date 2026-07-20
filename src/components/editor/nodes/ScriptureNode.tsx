@@ -5,26 +5,78 @@ import {
   EditorConfig,
   LexicalNode,
   $getNodeByKey,
-} from 'lexical';
-import React, { useState, useEffect } from 'react';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+} from "lexical";
+import React, { useEffect } from "react";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useBiblePassageQuery } from "../../../services/youversion";
 
 export const USFM_TO_BOOK_NAME: Record<string, string> = {
-  GEN: 'Genesis', EXD: 'Exodus', LEV: 'Leviticus', NUM: 'Numbers', DEU: 'Deuteronomy',
-  JOS: 'Joshua', JDG: 'Judges', RUT: 'Ruth', '1SA': '1 Samuel', '2SA': '2 Samuel',
-  '1KI': '1 Kings', '2KI': '2 Kings', '1CH': '1 Chronicles', '2CH': '2 Chronicles',
-  EZR: 'Ezra', NEH: 'Nehemiah', EST: 'Esther', JOB: 'Job', PSA: 'Psalm',
-  PRO: 'Proverbs', ECC: 'Ecclesiastes', SNG: 'Song of Solomon', ISA: 'Isaiah',
-  JER: 'Jeremiah', LAM: 'Lamentations', EZK: 'Ezekiel', DAN: 'Daniel',
-  HOS: 'Hosea', JOL: 'Joel', AMO: 'Amos', OBA: 'Obadiah', JON: 'Jonah',
-  MIC: 'Micah', NAM: 'Nahum', HAB: 'Habakkuk', ZEP: 'Zephaniah', HAG: 'Haggai',
-  ZEC: 'Zechariah', MAL: 'Malachi', MAT: 'Matthew', MRK: 'Mark', LUK: 'Luke',
-  JHN: 'John', ACT: 'Acts', ROM: 'Romans', '1CO': '1 Corinthians', '2CO': '2 Corinthians',
-  GAL: 'Galatians', EPH: 'Ephesians', PHP: 'Philippians', COL: 'Colossians',
-  '1TH': '1 Thessalonians', '2TH': '2 Thessalonians', '1TI': '1 Timothy',
-  '2TI': '2 Timothy', TIT: 'Titus', PHM: 'Philemon', HEB: 'Hebrews',
-  JAS: 'James', '1PE': '1 Peter', '2PE': '2 Peter', '1JN': '1 John',
-  '2JN': '2 John', '3JN': '3 John', JUD: 'Jude', REV: 'Revelation'
+  GEN: "Genesis",
+  EXD: "Exodus",
+  LEV: "Leviticus",
+  NUM: "Numbers",
+  DEU: "Deuteronomy",
+  JOS: "Joshua",
+  JDG: "Judges",
+  RUT: "Ruth",
+  "1SA": "1 Samuel",
+  "2SA": "2 Samuel",
+  "1KI": "1 Kings",
+  "2KI": "2 Kings",
+  "1CH": "1 Chronicles",
+  "2CH": "2 Chronicles",
+  EZR: "Ezra",
+  NEH: "Nehemiah",
+  EST: "Esther",
+  JOB: "Job",
+  PSA: "Psalm",
+  PRO: "Proverbs",
+  ECC: "Ecclesiastes",
+  SNG: "Song of Solomon",
+  ISA: "Isaiah",
+  JER: "Jeremiah",
+  LAM: "Lamentations",
+  EZK: "Ezekiel",
+  DAN: "Daniel",
+  HOS: "Hosea",
+  JOL: "Joel",
+  AMO: "Amos",
+  OBA: "Obadiah",
+  JON: "Jonah",
+  MIC: "Micah",
+  NAM: "Nahum",
+  HAB: "Habakkuk",
+  ZEP: "Zephaniah",
+  HAG: "Haggai",
+  ZEC: "Zechariah",
+  MAL: "Malachi",
+  MAT: "Matthew",
+  MRK: "Mark",
+  LUK: "Luke",
+  JHN: "John",
+  ACT: "Acts",
+  ROM: "Romans",
+  "1CO": "1 Corinthians",
+  "2CO": "2 Corinthians",
+  GAL: "Galatians",
+  EPH: "Ephesians",
+  PHP: "Philippians",
+  COL: "Colossians",
+  "1TH": "1 Thessalonians",
+  "2TH": "2 Thessalonians",
+  "1TI": "1 Timothy",
+  "2TI": "2 Timothy",
+  TIT: "Titus",
+  PHM: "Philemon",
+  HEB: "Hebrews",
+  JAS: "James",
+  "1PE": "1 Peter",
+  "2PE": "2 Peter",
+  "1JN": "1 John",
+  "2JN": "2 John",
+  "3JN": "3 John",
+  JUD: "Jude",
+  REV: "Revelation",
 };
 
 export interface SerializedScriptureNode extends SerializedLexicalNode {
@@ -37,7 +89,10 @@ export interface SerializedScriptureNode extends SerializedLexicalNode {
   verseText: string;
 }
 
-export class ScriptureNode extends DecoratorNode<React.ReactNode> {
+// @ts-ignore
+const globalRef = (typeof window !== "undefined" ? window : global) as any;
+
+class _ScriptureNode extends DecoratorNode<React.ReactNode> {
   __bookUSFM: string;
   __chapter: number;
   __verseStart: number;
@@ -47,10 +102,10 @@ export class ScriptureNode extends DecoratorNode<React.ReactNode> {
   __verseText: string;
 
   static getType(): string {
-    return 'scripture';
+    return "scripture";
   }
 
-  static clone(node: ScriptureNode): ScriptureNode {
+  static clone(node: _ScriptureNode): _ScriptureNode {
     return new ScriptureNode(
       node.__bookUSFM,
       node.__chapter,
@@ -59,7 +114,7 @@ export class ScriptureNode extends DecoratorNode<React.ReactNode> {
       node.__translation,
       node.__isCollapsed,
       node.__verseText,
-      node.__key
+      node.__key,
     );
   }
 
@@ -70,8 +125,8 @@ export class ScriptureNode extends DecoratorNode<React.ReactNode> {
     verseEnd: number,
     translation: string,
     isCollapsed: boolean,
-    verseText: string = '',
-    key?: NodeKey
+    verseText: string = "",
+    key?: NodeKey,
   ) {
     super(key);
     this.__bookUSFM = bookUSFM;
@@ -84,17 +139,21 @@ export class ScriptureNode extends DecoratorNode<React.ReactNode> {
   }
 
   createDOM(config: EditorConfig): HTMLElement {
-    const dom = document.createElement('span');
-    dom.style.display = 'inline-block';
-    dom.style.verticalAlign = 'middle';
+    const dom = document.createElement("span");
+    dom.style.display = "inline-block";
+    dom.style.verticalAlign = "middle";
     return dom;
   }
 
-  updateDOM(prevNode: ScriptureNode, dom: HTMLElement, config: EditorConfig): boolean {
+  updateDOM(
+    prevNode: _ScriptureNode,
+    dom: HTMLElement,
+    config: EditorConfig,
+  ): boolean {
     return false;
   }
 
-  static importJSON(serializedNode: SerializedLexicalNode): ScriptureNode {
+  static importJSON(serializedNode: SerializedLexicalNode): _ScriptureNode {
     const node = serializedNode as SerializedScriptureNode;
     return $createScriptureNode(
       node.bookUSFM,
@@ -103,13 +162,13 @@ export class ScriptureNode extends DecoratorNode<React.ReactNode> {
       node.verseEnd,
       node.translation,
       node.isCollapsed,
-      node.verseText
+      node.verseText,
     );
   }
 
   exportJSON(): SerializedScriptureNode {
     return {
-      type: 'scripture',
+      type: "scripture",
       version: 1,
       bookUSFM: this.__bookUSFM,
       chapter: this.__chapter,
@@ -174,6 +233,14 @@ export class ScriptureNode extends DecoratorNode<React.ReactNode> {
   }
 }
 
+if (globalRef && !globalRef.__ScriptureNode) {
+  globalRef.__ScriptureNode = _ScriptureNode;
+}
+
+export const ScriptureNode = globalRef?.__ScriptureNode || _ScriptureNode;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type ScriptureNode = _ScriptureNode;
+
 export function $createScriptureNode(
   bookUSFM: string,
   chapter: number,
@@ -181,8 +248,8 @@ export function $createScriptureNode(
   verseEnd: number,
   translation: string,
   isCollapsed: boolean,
-  verseText: string = ''
-): ScriptureNode {
+  verseText: string = "",
+): _ScriptureNode {
   return new ScriptureNode(
     bookUSFM,
     chapter,
@@ -190,13 +257,13 @@ export function $createScriptureNode(
     verseEnd,
     translation,
     isCollapsed,
-    verseText
+    verseText,
   );
 }
 
 export function $isScriptureNode(
-  node: LexicalNode | null | undefined
-): node is ScriptureNode {
+  node: LexicalNode | null | undefined,
+): node is _ScriptureNode {
   return node instanceof ScriptureNode;
 }
 
@@ -223,8 +290,6 @@ function ScriptureBadge({
   verseText,
 }: ScriptureBadgeProps) {
   const [editor] = useLexicalComposerContext();
-  const [fetchedText, setFetchedText] = useState('');
-  const [loading, setLoading] = useState(!verseText);
 
   const bookName = USFM_TO_BOOK_NAME[bookUSFM.toUpperCase()] || bookUSFM;
   const refText =
@@ -232,35 +297,26 @@ function ScriptureBadge({
       ? `${bookName} ${chapter}:${verseStart}-${verseEnd}`
       : `${bookName} ${chapter}:${verseStart}`;
 
-  const text = verseText || fetchedText;
+  // Fetch scripture text using TanStack Query if not already loaded in the node
+  const { data, isError, refetch, isFetching, isLoading } =
+    useBiblePassageQuery(translation, bookUSFM, chapter, verseStart, verseEnd, {
+      enabled: !verseText,
+    });
 
-  // Fetch scripture text if not already loaded
+  const text = verseText || data?.text || "";
+  const loading = !verseText && (isLoading || isFetching);
+
+  // When query loads the text successfully, write it back to the Lexical node
   useEffect(() => {
-    if (!verseText) {
-      import('../../../lib/bible')
-        .then(({ resolveStandardReference, fetchScripture }) => {
-          const ref = resolveStandardReference(bookName, chapter, verseStart, verseEnd);
-          return fetchScripture(ref, translation);
-        })
-        .then((data) => {
-          if (data && data.text) {
-            setFetchedText(data.text);
-            editor.update(() => {
-              const node = $getNodeByKey(nodeKey);
-              if ($isScriptureNode(node)) {
-                node.setVerseText(data.text);
-              }
-            });
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to load scripture text inside node:', err);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+    if (data?.text && !verseText) {
+      editor.update(() => {
+        const node = $getNodeByKey(nodeKey);
+        if ($isScriptureNode(node)) {
+          node.setVerseText(data.text);
+        }
+      });
     }
-  }, [verseText, bookName, chapter, verseStart, verseEnd, translation, editor, nodeKey]);
+  }, [data, verseText, editor, nodeKey]);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -273,51 +329,61 @@ function ScriptureBadge({
     });
   };
 
-  if (isCollapsed) {
-    return (
-      <span
-        contentEditable={false}
-        className="scripture-badge-inline"
-        onClick={handleToggle}
-        title={`Click to expand ${refText}`}
-      >
-        <span className="scripture-icon-bible">📖</span>
-        <span className="scripture-ref-label">
-          {refText} ({translation})
-        </span>
-        <span className="scripture-icon-arrow">▾</span>
-      </span>
-    );
-  }
-
   return (
-    <span
-      contentEditable={false}
-      className="scripture-card-expanded"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <span className="scripture-card-header">
-        <span className="scripture-card-title">
-          <span className="scripture-icon-bible">📖</span>
-          <span>{refText}</span>
-        </span>
-        <button
-          className="scripture-card-toggle"
+    <>
+      {isCollapsed ? (
+        <span
+          contentEditable={false}
+          className="scripture-badge-inline"
           onClick={handleToggle}
-          title="Click to collapse"
+          title={`Click to expand ${refText}`}
         >
-          <span>Collapse</span>
-          <span className="scripture-icon-arrow expanded">▾</span>
-        </button>
-      </span>
-      <p className="scripture-card-text">
-        {loading ? (
-          <span style={{ opacity: 0.6 }}>Loading scripture...</span>
-        ) : (
-          text || '(No scripture text available)'
-        )}
-      </p>
-      <span className="scripture-card-translation">{translation}</span>
-    </span>
+          <span className="scripture-icon-bible">📖</span>
+          <span className="scripture-ref-label">
+            {refText} ({translation})
+          </span>
+          <span className="scripture-icon-arrow">▾</span>
+        </span>
+      ) : (
+        <span
+          contentEditable={false}
+          className="scripture-card-expanded"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="scripture-card-header">
+            <span className="scripture-card-title">
+              <span className="scripture-icon-bible">📖</span>
+              <span>{refText}</span>
+            </span>
+            <button
+              className="scripture-card-toggle"
+              onClick={handleToggle}
+              title="Click to collapse"
+            >
+              <span>Collapse</span>
+              <span className="scripture-icon-arrow expanded">▾</span>
+            </button>
+          </span>
+          <p className="scripture-card-text">
+            {loading ? (
+              <span style={{ opacity: 0.6 }}>Loading scripture...</span>
+            ) : (
+              text || "(No scripture text available)"
+            )}
+          </p>
+          <span className="scripture-card-translation">{translation}</span>
+        </span>
+      )}
+
+      {isError && !verseText && (
+        <div
+          className="scripture-toast-error"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span>Failed to fetch scripture ({translation})</span>
+          <button onClick={() => refetch()}>Retry</button>
+        </div>
+      )}
+    </>
   );
 }

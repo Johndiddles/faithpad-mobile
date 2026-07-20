@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useLayoutEffect,
 } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -507,10 +508,13 @@ export default function FaithPadEditorDom({
     }
   };
 
+  // Create local QueryClient instance inside the DOM component environment
+  const [localQueryClient] = useState(() => new QueryClient());
+
   return (
-    <div className={`editor-container theme-${theme}`}>
-      <LexicalComposer initialConfig={initialConfig}>
-        <div className="editor-scroll">
+    <QueryClientProvider client={localQueryClient}>
+      <div className={`editor-container theme-${theme}`}>
+        <LexicalComposer initialConfig={initialConfig}>
           <RichTextPlugin
             contentEditable={<ContentEditable className="editor-input" />}
             placeholder={
@@ -526,8 +530,8 @@ export default function FaithPadEditorDom({
           <BridgePlugin registerApi={registerApi} />
           <CommandPlugin command={command} />
           <FloatingToolbarPlugin theme={theme} />
-        </div>
-      </LexicalComposer>
-    </div>
+        </LexicalComposer>
+      </div>
+    </QueryClientProvider>
   );
 }

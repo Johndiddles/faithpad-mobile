@@ -1,83 +1,88 @@
 /* Faith Pad Lexical Editor Core Stylesheet */
 
 :root {
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
   --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
 }
 
 .theme-light {
-  --editor-bg: transparent;      /* Transparent background */
-  --editor-text: #2C2A29;        /* Soft charcoal body text */
-  --editor-accent: #B8860B;      /* Theological warm gold */
-  --editor-accent-hover: #9B7008;
-  --editor-border: #E8E5DD;      /* Subtle border */
+  --editor-bg: transparent; /* Transparent background */
+  --editor-text: #2c2a29; /* Soft charcoal body text */
+  --editor-accent: #b8860b; /* Theological warm gold */
+  --editor-accent-hover: #9b7008;
+  --editor-border: #e8e5dd; /* Subtle border */
   --editor-selection: rgba(212, 175, 55, 0.25); /* Gold selection */
   --editor-placeholder: rgba(44, 42, 41, 0.4);
-  
+
   /* Floating Toolbar */
   --tb-bg: rgba(250, 248, 245, 0.9);
   --tb-border: rgba(224, 219, 209, 0.8);
-  --tb-shadow: 0 4px 20px -2px rgba(90, 80, 70, 0.15), 0 2px 8px -1px rgba(90, 80, 70, 0.1);
+  --tb-shadow:
+    0 4px 20px -2px rgba(90, 80, 70, 0.15), 0 2px 8px -1px rgba(90, 80, 70, 0.1);
   --tb-btn-hover: rgba(232, 229, 221, 0.8);
   --tb-btn-active: rgba(220, 216, 206, 0.9);
-  --tb-btn-text: #4A4644;
-  --tb-btn-text-active: #B8860B;
-  
+  --tb-btn-text: #4a4644;
+  --tb-btn-text-active: #b8860b;
+
   /* Scripture Node Badge (Collapsed) */
-  --badge-bg: #F0EDE6;
-  --badge-border: #E2DDD5;
-  --badge-text: #6A6259;
-  --badge-icon: #B8860B;
-  --badge-hover-bg: #E8E4D9;
-  
+  --badge-bg: #f0ede6;
+  --badge-border: #e2ddd5;
+  --badge-text: #6a6259;
+  --badge-icon: #b8860b;
+  --badge-hover-bg: #e8e4d9;
+
   /* Scripture Node Card (Expanded) */
-  --expanded-bg: #FAF8F5;
-  --expanded-border: #D4AF37;   /* Bright gold left accent */
+  --expanded-bg: #faf8f5;
+  --expanded-border: #d4af37; /* Bright gold left accent */
   --expanded-card-bg: rgba(240, 240, 235, 0.4);
-  --expanded-text: #3E3B3A;
-  --expanded-translation: #8C847A;
+  --expanded-text: #3e3b3a;
+  --expanded-translation: #8c847a;
 }
 
 .theme-dark {
-  --editor-bg: transparent;      /* Transparent background */
-  --editor-text: #E5E5EA;        /* Soft off-white */
-  --editor-accent: #D4AF37;      /* Theological gold */
-  --editor-accent-hover: #E8C14D;
-  --editor-border: #2C2C2E;      /* Soft dark border */
+  --editor-bg: transparent; /* Transparent background */
+  --editor-text: #e5e5ea; /* Soft off-white */
+  --editor-accent: #d4af37; /* Theological gold */
+  --editor-accent-hover: #e8c14d;
+  --editor-border: #2c2c2e; /* Soft dark border */
   --editor-selection: rgba(212, 175, 55, 0.35); /* Gold selection */
   --editor-placeholder: rgba(229, 229, 234, 0.4);
-  
+
   /* Floating Toolbar */
   --tb-bg: rgba(28, 28, 30, 0.9);
   --tb-border: rgba(58, 58, 60, 0.8);
-  --tb-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 2px 10px -1px rgba(0, 0, 0, 0.3);
+  --tb-shadow:
+    0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 2px 10px -1px rgba(0, 0, 0, 0.3);
   --tb-btn-hover: rgba(44, 44, 46, 0.8);
   --tb-btn-active: rgba(58, 58, 60, 0.9);
-  --tb-btn-text: #AEAEB2;
-  --tb-btn-text-active: #D4AF37;
-  
+  --tb-btn-text: #aeaeb2;
+  --tb-btn-text-active: #d4af37;
+
   /* Scripture Node Badge (Collapsed) */
-  --badge-bg: #2C2C2E;
-  --badge-border: #3A3A3C;
-  --badge-text: #C7A26B;
-  --badge-icon: #D4AF37;
-  --badge-hover-bg: #3A3A3C;
-  
+  --badge-bg: #2c2c2e;
+  --badge-border: #3a3a3c;
+  --badge-text: #c7a26b;
+  --badge-icon: #d4af37;
+  --badge-hover-bg: #3a3a3c;
+
   /* Scripture Node Card (Expanded) */
-  --expanded-bg: #1C1C1E;
-  --expanded-border: #D4AF37;   /* Gold left accent */
+  --expanded-bg: #1c1c1e;
+  --expanded-border: #d4af37; /* Gold left accent */
   --expanded-card-bg: rgba(44, 44, 46, 0.3);
-  --expanded-text: #E5E5EA;
-  --expanded-translation: #8E8E93;
+  --expanded-text: #e5e5ea;
+  --expanded-translation: #8e8e93;
 }
 
 /* Base resets & layout */
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
   background-color: var(--editor-bg);
   color: var(--editor-text);
   font-family: var(--font-sans);
@@ -88,36 +93,25 @@ html, body {
 .editor-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100%;
   width: 100%;
   background-color: var(--editor-bg);
   box-sizing: border-box;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Scrollable area */
-.editor-scroll {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 0 0 100px 0;          /* Removed padding except bottom scroll padding */
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  overflow: visible;
+  padding: 0 0 24px 0;
 }
 
 /* Content Editable Canvas */
 .editor-input {
   flex: 1;
   outline: none;
-  font-size: 17px;
-  line-height: 1.65;
+  font-size: 16px;
+  line-height: 1.5;
   tab-size: 4;
   white-space: pre-wrap;
   word-break: break-word;
   caret-color: var(--editor-accent);
-  color: var(--editor-text);     /* Explicitly set editor text color */
+  color: var(--editor-text);
   min-height: 150px;
 }
 
@@ -129,12 +123,12 @@ html, body {
 /* Custom placeholder styling */
 .editor-placeholder {
   position: absolute;
-  top: 0;                        /* Aligned with padding-less start */
-  left: 0;                       /* Aligned with padding-less start */
-  font-size: 17px;
+  top: 0;
+  left: 0;
+  font-size: 16px;
   color: var(--editor-placeholder);
   pointer-events: none;
-  line-height: 1.65;
+  line-height: 1.5;
   user-select: none;
   font-family: var(--font-sans);
 }
@@ -163,7 +157,8 @@ html, body {
   letter-spacing: -0.01em;
 }
 
-.editor-input ul, .editor-input ol {
+.editor-input ul,
+.editor-input ol {
   margin: 0 0 16px 24px;
   padding: 0;
 }
@@ -200,7 +195,9 @@ html, body {
   opacity: 0;
   transform: scale(0.95) translateY(5px);
   pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .floating-toolbar.visible {
@@ -230,7 +227,9 @@ html, body {
   color: var(--tb-btn-text);
   cursor: pointer;
   outline: none;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .tb-btn:hover {
@@ -271,7 +270,9 @@ html, body {
   -webkit-backdrop-filter: blur(16px);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 
 .tb-color-palette.visible {
@@ -286,7 +287,9 @@ html, body {
   border-radius: 50%;
   border: 1.5px solid transparent;
   cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.1s ease;
+  transition:
+    transform 0.1s ease,
+    border-color 0.1s ease;
 }
 
 .color-dot:hover {
@@ -314,7 +317,9 @@ html, body {
   user-select: none;
   vertical-align: middle;
   margin: 0 4px;
-  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.1s ease;
+  transition:
+    background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.1s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
@@ -409,4 +414,42 @@ html, body {
   letter-spacing: 0.05em;
   margin-top: 6px;
   display: block;
+}
+
+/* Scripture Toast Error Styles */
+.scripture-toast-error {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #ef4444;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.15),
+    0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+.scripture-toast-error button {
+  background-color: white;
+  color: #ef4444;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.scripture-toast-error button:active {
+  opacity: 0.8;
 }

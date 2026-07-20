@@ -3,7 +3,7 @@ export interface User {
   email: string;
   displayName: string;
   avatarUrl: string | null;
-  globalDefaultTranslation: 'ESV' | 'NIV' | 'NLT' | 'AMP' | 'KJV';
+  globalDefaultTranslation: string;
   aiDetectionEnabled: boolean;
   createdAt: string;
   updatedAt: string;

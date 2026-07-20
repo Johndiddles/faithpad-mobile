@@ -64,17 +64,19 @@ export const FaithPadEditor = forwardRef<
   }));
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 w-full">
       <FaithPadEditorDom
         initialContent={initialContent}
         onChange={onChange}
         theme={theme}
         command={editorCommand}
         dom={{
-          scrollEnabled: false,
+          scrollEnabled: true,
           keyboardDisplayRequiresUserAction: false,
           opaque: false,
-          containerStyle: { backgroundColor: "transparent" },
+          containerStyle: {
+            backgroundColor: "transparent",
+          },
         }}
         style={styles.webview}
       />
