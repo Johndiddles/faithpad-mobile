@@ -13,12 +13,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
+import { Entypo, Ionicons } from "@expo/vector-icons";
+// import { useForm } from "react-hook-form";
+// import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useNotesStore, useAuthStore } from "../../../store";
 import { EditorBlock, BlockType } from "../../../lib/types";
 import { parseScriptureRef } from "../../../lib/bible";
@@ -27,7 +26,7 @@ import {
   fetchBiblePassage,
   useBibleVersionsQuery,
 } from "../../../services/youversion";
-import { cn } from "@/lib/utils";
+// import { cn } from "@/lib/utils";
 import { Dropdown } from "@/components/ui/dropdown";
 import { BIBLE_METADATA } from "../../../lib/bible-metadata";
 import {
@@ -241,21 +240,22 @@ function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
 }
 
 // Sharing Zod Validation Schema
-const shareSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
-  permissionLevel: z.enum(["VIEW", "EDIT"]),
-});
+// const shareSchema = z.object({
+//   email: z.email({ error: "Please enter a valid email address" }),
+//   permissionLevel: z.enum(["VIEW", "EDIT"]),
+// });
 
 export default function SingleNoteEditorScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const noteId = params.id;
 
-  const { notes, updateNote, noteShares, shareNote, removeShare } =
-    useNotesStore();
+  const {
+    notes,
+    updateNote,
+    noteShares,
+    //  shareNote, removeShare
+  } = useNotesStore();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
@@ -267,8 +267,9 @@ export default function SingleNoteEditorScreen() {
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing">("synced");
 
   // Modals state
-  const [shareModalVisible, setShareModalVisible] = useState(false);
+  // const [shareModalVisible, setShareModalVisible] = useState(false);
   const [manualBibleModalVisible, setManualBibleModalVisible] = useState(false);
+  const [insertModalVisible, setInsertModalVisible] = useState(false);
 
   // Scripture Selection state
   const [bibleBook, setBibleBook] = useState("John");
@@ -288,28 +289,28 @@ export default function SingleNoteEditorScreen() {
   }, [note?.blocks]);
 
   // Sharing form
-  const {
-    control: shareControl,
-    handleSubmit: handleShareSubmit,
-    formState: { errors: shareErrors },
-    reset: resetShareForm,
-  } = useForm({
-    defaultValues: { email: "", permissionLevel: "VIEW" as "VIEW" | "EDIT" },
-    resolver: async (data) => {
-      try {
-        const values = shareSchema.parse(data);
-        return { values, errors: {} };
-      } catch (err: any) {
-        const errors: any = {};
-        if (err instanceof z.ZodError) {
-          err.issues.forEach((e: any) => {
-            errors[e.path.join(".")] = { message: e.message };
-          });
-        }
-        return { values: {}, errors };
-      }
-    },
-  });
+  // const {
+  //   control: shareControl,
+  //   handleSubmit: handleShareSubmit,
+  //   formState: { errors: shareErrors },
+  //   reset: resetShareForm,
+  // } = useForm({
+  //   defaultValues: { email: "", permissionLevel: "VIEW" as "VIEW" | "EDIT" },
+  //   resolver: async (data) => {
+  //     try {
+  //       const values = shareSchema.parse(data);
+  //       return { values, errors: {} };
+  //     } catch (err: any) {
+  //       const errors: any = {};
+  //       if (err instanceof z.ZodError) {
+  //         err.issues.forEach((e: any) => {
+  //           errors[e.path.join(".")] = { message: e.message };
+  //         });
+  //       }
+  //       return { values: {}, errors };
+  //     }
+  //   },
+  // });
 
   const { data: versionsData } = useBibleVersionsQuery();
 
@@ -462,17 +463,17 @@ export default function SingleNoteEditorScreen() {
   };
 
   // Share handlers
-  const handleShareSubmitForm = (data: any) => {
-    shareNote(note.id, data.email, data.permissionLevel);
-    resetShareForm({ email: "", permissionLevel: "VIEW" });
-    Alert.alert("Success", `Note shared successfully with ${data.email}`);
-  };
+  // const handleShareSubmitForm = (data: any) => {
+  //   shareNote(note.id, data.email, data.permissionLevel);
+  //   resetShareForm({ email: "", permissionLevel: "VIEW" });
+  //   Alert.alert("Success", `Note shared successfully with ${data.email}`);
+  // };
 
-  const handleRemoveShare = (shareId: string) => {
-    removeShare(shareId);
-  };
+  // const handleRemoveShare = (shareId: string) => {
+  //   removeShare(shareId);
+  // };
 
-  const sharedUsers = noteShares.filter((s) => s.noteId === note.id);
+  // const sharedUsers = noteShares.filter((s) => s.noteId === note.id);
 
   const versionOptions = versionsData
     ? versionsData.map((v) => ({
@@ -499,7 +500,7 @@ export default function SingleNoteEditorScreen() {
 
   // Chapter options
   const chapterOptions = Array.from({ length: chapterCount }, (_, i) => ({
-    label: `Chapter ${i + 1}`,
+    label: `${i + 1}`,
     value: `${i + 1}`,
   }));
 
@@ -589,7 +590,7 @@ export default function SingleNoteEditorScreen() {
             </AppText>
           </View>
 
-          {isOwner && (
+          {/* {isOwner && (
             <Pressable
               onPress={() => setShareModalVisible(true)}
               className="p-2 bg-secondary/80 rounded-full active:opacity-60"
@@ -601,7 +602,7 @@ export default function SingleNoteEditorScreen() {
                 color={Platform.OS === "ios" ? "#e4b022" : "#d4af37"}
               />
             </Pressable>
-          )}
+          )} */}
         </View>
       </View>
 
@@ -617,7 +618,7 @@ export default function SingleNoteEditorScreen() {
             editable={canEdit}
             placeholder="Title"
             placeholderTextColor="hsl(var(--muted-foreground))"
-            className="text-2xl font-sans font-bold text-foreground mb-4 p-0"
+            className="text-xl font-bold text-foreground mb-4 p-0"
           />
 
           <View className="flex-1">
@@ -656,53 +657,187 @@ export default function SingleNoteEditorScreen() {
               </Pressable>
 
               <Pressable
-                onPress={() => {
-                  setIsInsertingComparison(false);
-                  setManualBibleModalVisible(true);
-                }}
-                className="flex-row items-center gap-x-1 p-1 bg-[#e4b022]/15 dark:bg-[#d4af37]/15 px-2.5 py-1 rounded-lg border border-[#e4b022]/20 active:opacity-80"
+                onPress={() => setInsertModalVisible(true)}
+                className="flex-row items-center gap-x-1.5 p-1 px-3 py-1 "
               >
-                <Ionicons
-                  name="book-outline"
-                  size={14}
-                  className="text-[#e4b022] dark:text-[#d4af37]"
-                  color="gold"
-                />
-                <AppText
-                  weight="semibold"
-                  className="text-[11px] text-[#e4b022] dark:text-[#d4af37]"
-                >
-                  + Scripture
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  setIsInsertingComparison(true);
-                  setManualBibleModalVisible(true);
-                }}
-                className="flex-row items-center gap-x-1 p-1 bg-[#e4b022]/15 dark:bg-[#d4af37]/15 px-2.5 py-1 rounded-lg border border-[#e4b022]/20 active:opacity-80"
-              >
-                <Ionicons
-                  name="git-compare-outline"
-                  size={14}
-                  className="text-[#e4b022] dark:text-[#d4af37]"
-                  color="gold"
-                />
-                <AppText
-                  weight="semibold"
-                  className="text-[11px] text-[#e4b022] dark:text-[#d4af37]"
-                >
-                  + Compare
-                </AppText>
+                <Entypo name="attachment" size={16} />
               </Pressable>
             </View>
           </View>
         )}
       </KeyboardAvoidingView>
 
-      {/* Sharing Panel Bottom Sheet Modal */}
+      {/* Insert Options Bottom Drawer Modal */}
       <Modal
+        visible={insertModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setInsertModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-end">
+          <View className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%] pb-10">
+            <View className="flex-row justify-between items-center mb-6">
+              <AppText weight="bold" className="text-xl">
+                Insert
+              </AppText>
+              <Pressable
+                onPress={() => setInsertModalVisible(false)}
+                className="p-1.5"
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  className="text-foreground"
+                  color={theme === "dark" ? "#ffffff" : "#000000"}
+                />
+              </Pressable>
+            </View>
+
+            <View className="space-y-3">
+              {/* Option 1: Scripture */}
+              <Pressable
+                onPress={() => {
+                  setInsertModalVisible(false);
+                  setIsInsertingComparison(false);
+                  setTimeout(() => {
+                    setManualBibleModalVisible(true);
+                  }, 100);
+                }}
+                className="flex-row items-center justify-between p-4 bg-secondary/30 dark:bg-secondary/15 rounded-xl border border-border/60 active:bg-secondary/50"
+              >
+                <View className="flex-row items-center flex-1 mr-4">
+                  <View className="w-10 h-10 rounded-full bg-[#e4b022]/15 dark:bg-[#d4af37]/15 justify-center items-center mr-3.5">
+                    <Ionicons
+                      name="book-outline"
+                      size={20}
+                      className="text-[#e4b022] dark:text-[#d4af37]"
+                      color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <AppText weight="bold" className="text-sm text-foreground">
+                      Bible Scripture
+                    </AppText>
+                    <AppText className="text-[11px] text-muted-foreground mt-0.5">
+                      Insert a verse or passage
+                    </AppText>
+                  </View>
+                </View>
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={16}
+                  className="text-muted-foreground"
+                  color="gray"
+                />
+              </Pressable>
+
+              {/* Option 2: Comparison */}
+              <Pressable
+                onPress={() => {
+                  setInsertModalVisible(false);
+                  setIsInsertingComparison(true);
+                  setTimeout(() => {
+                    setManualBibleModalVisible(true);
+                  }, 100);
+                }}
+                className="flex-row items-center justify-between p-4 bg-secondary/30 dark:bg-secondary/15 rounded-xl border border-border/60 active:bg-secondary/50"
+              >
+                <View className="flex-row items-center flex-1 mr-4">
+                  <View className="w-10 h-10 rounded-full bg-[#e4b022]/15 dark:bg-[#d4af37]/15 justify-center items-center mr-3.5">
+                    <Ionicons
+                      name="git-compare-outline"
+                      size={20}
+                      className="text-[#e4b022] dark:text-[#d4af37]"
+                      color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <AppText weight="bold" className="text-sm text-foreground">
+                      Translation Comparison
+                    </AppText>
+                    <AppText className="text-[11px] text-muted-foreground mt-0.5">
+                      Compare translations side-by-side
+                    </AppText>
+                  </View>
+                </View>
+                <Ionicons
+                  name="chevron-forward-outline"
+                  size={16}
+                  className="text-muted-foreground"
+                  color="gray"
+                />
+              </Pressable>
+
+              {/* Option 3: Photo & Media (Coming Soon) */}
+              {/* <View className="flex-row items-center justify-between p-4 bg-secondary/10 dark:bg-secondary/5 rounded-xl border border-border/30 opacity-50">
+                <View className="flex-row items-center flex-1 mr-4">
+                  <View className="w-10 h-10 rounded-full bg-muted justify-center items-center mr-3.5">
+                    <Ionicons
+                      name="image-outline"
+                      size={20}
+                      className="text-muted-foreground"
+                      color="gray"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <AppText
+                        weight="bold"
+                        className="text-sm text-foreground"
+                      >
+                        Photo & Media
+                      </AppText>
+                      <View className="ml-2 bg-muted px-1.5 py-0.5 rounded">
+                        <AppText className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">
+                          Soon
+                        </AppText>
+                      </View>
+                    </View>
+                    <AppText className="text-[11px] text-muted-foreground mt-0.5">
+                      Insert images, illustrations, or audio recordings
+                    </AppText>
+                  </View>
+                </View>
+              </View> */}
+
+              {/* Option 4: Document File (Coming Soon) */}
+              {/* <View className="flex-row items-center justify-between p-4 bg-secondary/10 dark:bg-secondary/5 rounded-xl border border-border/30 opacity-50">
+                <View className="flex-row items-center flex-1 mr-4">
+                  <View className="w-10 h-10 rounded-full bg-muted justify-center items-center mr-3.5">
+                    <Ionicons
+                      name="document-text-outline"
+                      size={20}
+                      className="text-muted-foreground"
+                      color="gray"
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <View className="flex-row items-center">
+                      <AppText
+                        weight="bold"
+                        className="text-sm text-foreground"
+                      >
+                        Document File
+                      </AppText>
+                      <View className="ml-2 bg-muted px-1.5 py-0.5 rounded">
+                        <AppText className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">
+                          Soon
+                        </AppText>
+                      </View>
+                    </View>
+                    <AppText className="text-[11px] text-muted-foreground mt-0.5">
+                      Attach external study guides, PDFs, or slides
+                    </AppText>
+                  </View>
+                </View>
+              </View> */}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sharing Panel Bottom Sheet Modal */}
+      {/* <Modal
         visible={shareModalVisible}
         transparent
         animationType="slide"
@@ -851,7 +986,7 @@ export default function SingleNoteEditorScreen() {
             />
           </View>
         </View>
-      </Modal>
+      </Modal> */}
 
       {/* Manual Bible Selection bottom drawer modal */}
       <Modal
