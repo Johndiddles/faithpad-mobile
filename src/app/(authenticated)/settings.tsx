@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore, useNotesStore } from "../../store";
 import { Dropdown } from "@/components/ui/dropdown";
-import { useBibleVersionsQuery } from "../../services/youversion";
+import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
 
 const profileSchema = z.object({
   displayName: z
@@ -65,9 +65,7 @@ export default function SettingsScreen() {
     }, 600);
   };
 
-  const handleUpdateTranslation = (
-    translation: string,
-  ) => {
+  const handleUpdateTranslation = (translation: string) => {
     updateSettings(translation, user?.aiDetectionEnabled !== false);
   };
 

@@ -8,8 +8,8 @@ import {
 } from "lexical";
 import React, { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useBiblePassageQuery } from "../../../services/youversion";
 import { formatScriptureRef } from "@/constants/bible";
+import { useBiblePassageQuery } from "@/queries/useBiblePassage";
 
 export interface SerializedScriptureNode extends SerializedLexicalNode {
   bookUSFM: string;

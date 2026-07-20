@@ -22,10 +22,7 @@ import { useNotesStore, useAuthStore } from "../../../store";
 import { EditorBlock, BlockType } from "../../../lib/types";
 import { parseScriptureRef } from "../../../lib/bible";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  fetchBiblePassage,
-  useBibleVersionsQuery,
-} from "../../../services/youversion";
+import { fetchBiblePassage } from "../../../services/youversion";
 // import { cn } from "@/lib/utils";
 import { Dropdown } from "@/components/ui/dropdown";
 import { BIBLE_METADATA } from "../../../lib/bible-metadata";
@@ -34,6 +31,7 @@ import {
   FaithPadEditorRef,
 } from "@/components/editor/FaithPadEditor";
 import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
+import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
 
 function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
   if (oldBlocks.length === 1 && oldBlocks[0].content.startsWith('{"root":')) {
@@ -200,7 +198,8 @@ export default function SingleNoteEditorScreen() {
   const [manualBibleModalVisible, setManualBibleModalVisible] = useState(false);
   const [insertModalVisible, setInsertModalVisible] = useState(false);
   const [textColorModalVisible, setTextColorModalVisible] = useState(false);
-  const [highlightColorModalVisible, setHighlightColorModalVisible] = useState(false);
+  const [highlightColorModalVisible, setHighlightColorModalVisible] =
+    useState(false);
 
   // Scripture Selection state
   const [bibleBook, setBibleBook] = useState("John");
@@ -216,19 +215,22 @@ export default function SingleNoteEditorScreen() {
   const theme = colorScheme === "dark" ? "dark" : "light";
   const editorRef = useRef<FaithPadEditorRef>(null);
 
-  const textColors = theme === "dark" ? [
-    { name: "Default", value: "inherit" },
-    { name: "Red", value: "#EC7063" },
-    { name: "Gold", value: "#D4AF37" },
-    { name: "Green", value: "#58D68D" },
-    { name: "Blue", value: "#5DADE2" },
-  ] : [
-    { name: "Default", value: "inherit" },
-    { name: "Red", value: "#C0392B" },
-    { name: "Gold", value: "#B8860B" },
-    { name: "Green", value: "#27AE60" },
-    { name: "Blue", value: "#2980B9" },
-  ];
+  const textColors =
+    theme === "dark"
+      ? [
+          { name: "Default", value: "inherit" },
+          { name: "Red", value: "#EC7063" },
+          { name: "Gold", value: "#D4AF37" },
+          { name: "Green", value: "#58D68D" },
+          { name: "Blue", value: "#5DADE2" },
+        ]
+      : [
+          { name: "Default", value: "inherit" },
+          { name: "Red", value: "#C0392B" },
+          { name: "Gold", value: "#B8860B" },
+          { name: "Green", value: "#27AE60" },
+          { name: "Blue", value: "#2980B9" },
+        ];
 
   const highlightColors = [
     { name: "Clear", value: "transparent" },
