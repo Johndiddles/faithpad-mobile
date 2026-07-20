@@ -15,6 +15,13 @@ export interface FaithPadEditorRef {
     translation: string;
     verseText?: string;
   }) => void;
+  insertComparison: (comparison: {
+    bookUSFM: string;
+    chapter: number;
+    verseStart: number;
+    verseEnd?: number;
+    comparisons: { translation: string; text: string }[];
+  }) => void;
 }
 
 export interface FaithPadEditorProps {
@@ -59,6 +66,13 @@ export const FaithPadEditor = forwardRef<
         id: Math.random().toString(),
         type: "insert-scripture",
         value: scripture,
+      });
+    },
+    insertComparison: (comparison) => {
+      setEditorCommand({
+        id: Math.random().toString(),
+        type: "insert-comparison",
+        value: comparison,
       });
     },
   }));

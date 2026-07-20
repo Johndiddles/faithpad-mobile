@@ -27,6 +27,7 @@ import {
 import { $patchStyleText } from "@lexical/selection";
 
 import { ScriptureNode, $createScriptureNode } from "./nodes/ScriptureNode";
+import { ComparisonNode, $createComparisonNode } from "./nodes/ComparisonNode";
 import "./FaithPadEditor.css";
 
 // Selection Formatting Constants
@@ -156,6 +157,29 @@ function BridgePlugin({ registerApi }: BridgePluginProps) {
             }
           });
         },
+        insertComparison: (comparison: {
+          bookUSFM: string;
+          chapter: number;
+          verseStart: number;
+          verseEnd?: number;
+          comparisons: { translation: string; text: string }[];
+        }) => {
+          editor.focus();
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              const node = $createComparisonNode(
+                comparison.bookUSFM,
+                comparison.chapter,
+                comparison.verseStart,
+                comparison.verseEnd || comparison.verseStart,
+                comparison.comparisons,
+                true, // starts collapsed
+              );
+              selection.insertNodes([node]);
+            }
+          });
+        },
       });
     }
   }, [editor, registerApi]);
@@ -212,6 +236,22 @@ function CommandPlugin({ command }: CommandPluginProps) {
                 command.value.translation,
                 true, // starts collapsed
                 command.value.verseText || "",
+              );
+              selection.insertNodes([node]);
+            }
+          });
+          break;
+        case "insert-comparison":
+          editor.update(() => {
+            const selection = $getSelection();
+            if ($isRangeSelection(selection)) {
+              const node = $createComparisonNode(
+                command.value.bookUSFM,
+                command.value.chapter,
+                command.value.verseStart,
+                command.value.verseEnd || command.value.verseStart,
+                command.value.comparisons,
+                true, // starts collapsed
               );
               selection.insertNodes([node]);
             }
@@ -495,7 +535,7 @@ export default function FaithPadEditorDom({
         italic: "editor-text-italic",
       },
     },
-    nodes: [ScriptureNode, HeadingNode, ListNode, ListItemNode],
+    nodes: [ScriptureNode, ComparisonNode, HeadingNode, ListNode, ListItemNode],
     onError: (error: Error) => {
       console.error("[Lexical] Error:", error);
     },

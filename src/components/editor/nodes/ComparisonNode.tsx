@@ -6,46 +6,42 @@ import {
   LexicalNode,
   $getNodeByKey,
 } from "lexical";
-import React, { useEffect } from "react";
+import React from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useBiblePassageQuery } from "../../../services/youversion";
 import { formatScriptureRef } from "@/constants/bible";
 
-export interface SerializedScriptureNode extends SerializedLexicalNode {
+export interface SerializedComparisonNode extends SerializedLexicalNode {
   bookUSFM: string;
   chapter: number;
   verseStart: number;
   verseEnd: number;
-  translation: string;
+  comparisons: { translation: string; text: string }[];
   isCollapsed: boolean;
-  verseText: string;
 }
 
 // @ts-ignore
 const globalRef = (typeof window !== "undefined" ? window : global) as any;
 
-class _ScriptureNode extends DecoratorNode<React.ReactNode> {
+class _ComparisonNode extends DecoratorNode<React.ReactNode> {
   __bookUSFM: string;
   __chapter: number;
   __verseStart: number;
   __verseEnd: number;
-  __translation: string;
+  __comparisons: { translation: string; text: string }[];
   __isCollapsed: boolean;
-  __verseText: string;
 
   static getType(): string {
-    return "scripture";
+    return "comparison";
   }
 
-  static clone(node: _ScriptureNode): _ScriptureNode {
-    return new ScriptureNode(
+  static clone(node: _ComparisonNode): _ComparisonNode {
+    return new ComparisonNode(
       node.__bookUSFM,
       node.__chapter,
       node.__verseStart,
       node.__verseEnd,
-      node.__translation,
+      node.__comparisons,
       node.__isCollapsed,
-      node.__verseText,
       node.__key,
     );
   }
@@ -55,9 +51,8 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
     chapter: number,
     verseStart: number,
     verseEnd: number,
-    translation: string,
+    comparisons: { translation: string; text: string }[],
     isCollapsed: boolean,
-    verseText: string = "",
     key?: NodeKey,
   ) {
     super(key);
@@ -65,9 +60,8 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
     this.__chapter = chapter;
     this.__verseStart = verseStart;
     this.__verseEnd = verseEnd;
-    this.__translation = translation;
+    this.__comparisons = comparisons;
     this.__isCollapsed = isCollapsed;
-    this.__verseText = verseText;
   }
 
   createDOM(config: EditorConfig): HTMLElement {
@@ -78,37 +72,35 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
   }
 
   updateDOM(
-    prevNode: _ScriptureNode,
+    prevNode: _ComparisonNode,
     dom: HTMLElement,
     config: EditorConfig,
   ): boolean {
     return false;
   }
 
-  static importJSON(serializedNode: SerializedLexicalNode): _ScriptureNode {
-    const node = serializedNode as SerializedScriptureNode;
-    return $createScriptureNode(
+  static importJSON(serializedNode: SerializedLexicalNode): _ComparisonNode {
+    const node = serializedNode as SerializedComparisonNode;
+    return $createComparisonNode(
       node.bookUSFM,
       node.chapter,
       node.verseStart,
       node.verseEnd,
-      node.translation,
+      node.comparisons,
       node.isCollapsed,
-      node.verseText,
     );
   }
 
-  exportJSON(): SerializedScriptureNode {
+  exportJSON(): SerializedComparisonNode {
     return {
-      type: "scripture",
+      type: "comparison",
       version: 1,
       bookUSFM: this.__bookUSFM,
       chapter: this.__chapter,
       verseStart: this.__verseStart,
       verseEnd: this.__verseEnd,
-      translation: this.__translation,
+      comparisons: this.__comparisons,
       isCollapsed: this.__isCollapsed,
-      verseText: this.__verseText,
     };
   }
 
@@ -125,14 +117,11 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
   getVerseEnd(): number {
     return this.__verseEnd;
   }
-  getTranslation(): string {
-    return this.__translation;
+  getComparisons(): { translation: string; text: string }[] {
+    return this.__comparisons;
   }
   getIsCollapsed(): boolean {
     return this.__isCollapsed;
-  }
-  getVerseText(): string {
-    return this.__verseText;
   }
 
   setIsCollapsed(isCollapsed: boolean): void {
@@ -140,9 +129,9 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
     writable.__isCollapsed = isCollapsed;
   }
 
-  setVerseText(verseText: string): void {
+  setComparisons(comparisons: { translation: string; text: string }[]): void {
     const writable = this.getWritable();
-    writable.__verseText = verseText;
+    writable.__comparisons = comparisons;
   }
 
   isInline(): boolean {
@@ -151,111 +140,86 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
 
   decorate(editor: any, config: EditorConfig): React.ReactNode {
     return (
-      <ScriptureBadge
+      <ComparisonBadge
         nodeKey={this.getKey()}
         bookUSFM={this.__bookUSFM}
         chapter={this.__chapter}
         verseStart={this.__verseStart}
         verseEnd={this.__verseEnd}
-        translation={this.__translation}
+        comparisons={this.__comparisons}
         isCollapsed={this.__isCollapsed}
-        verseText={this.__verseText}
       />
     );
   }
 }
 
-if (globalRef && !globalRef.__ScriptureNode) {
-  globalRef.__ScriptureNode = _ScriptureNode;
+if (globalRef && !globalRef.__ComparisonNode) {
+  globalRef.__ComparisonNode = _ComparisonNode;
 }
 
-export const ScriptureNode = globalRef?.__ScriptureNode || _ScriptureNode;
+export const ComparisonNode = globalRef?.__ComparisonNode || _ComparisonNode;
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export type ScriptureNode = _ScriptureNode;
+export type ComparisonNode = _ComparisonNode;
 
-export function $createScriptureNode(
+export function $createComparisonNode(
   bookUSFM: string,
   chapter: number,
   verseStart: number,
   verseEnd: number,
-  translation: string,
+  comparisons: { translation: string; text: string }[],
   isCollapsed: boolean,
-  verseText: string = "",
-): _ScriptureNode {
-  return new ScriptureNode(
+): _ComparisonNode {
+  return new ComparisonNode(
     bookUSFM,
     chapter,
     verseStart,
     verseEnd,
-    translation,
+    comparisons,
     isCollapsed,
-    verseText,
   );
 }
 
-export function $isScriptureNode(
+export function $isComparisonNode(
   node: LexicalNode | null | undefined,
-): node is _ScriptureNode {
-  return node instanceof ScriptureNode;
+): node is _ComparisonNode {
+  return node instanceof ComparisonNode;
 }
 
-// React Badge & Card renderer component
-interface ScriptureBadgeProps {
+interface ComparisonBadgeProps {
   nodeKey: string;
   bookUSFM: string;
   chapter: number;
   verseStart: number;
   verseEnd: number;
-  translation: string;
+  comparisons: { translation: string; text: string }[];
   isCollapsed: boolean;
-  verseText: string;
 }
 
-function ScriptureBadge({
+function ComparisonBadge({
   nodeKey,
   bookUSFM,
   chapter,
   verseStart,
   verseEnd,
-  translation,
+  comparisons,
   isCollapsed,
-  verseText,
-}: ScriptureBadgeProps) {
+}: ComparisonBadgeProps) {
   const [editor] = useLexicalComposerContext();
 
   const refText = formatScriptureRef(bookUSFM, chapter, verseStart, verseEnd);
-
-  // Fetch scripture text using TanStack Query if not already loaded in the node
-  const { data, isError, refetch, isFetching, isLoading } =
-    useBiblePassageQuery(translation, bookUSFM, chapter, verseStart, verseEnd, {
-      enabled: !verseText,
-    });
-
-  const text = verseText || data?.text || "";
-  const loading = !verseText && (isLoading || isFetching);
-
-  // When query loads the text successfully, write it back to the Lexical node
-  useEffect(() => {
-    if (data?.text && !verseText) {
-      editor.update(() => {
-        const node = $getNodeByKey(nodeKey);
-        if ($isScriptureNode(node)) {
-          node.setVerseText(data.text);
-        }
-      });
-    }
-  }, [data, verseText, editor, nodeKey]);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     editor.update(() => {
       const node = $getNodeByKey(nodeKey);
-      if ($isScriptureNode(node)) {
+      if ($isComparisonNode(node)) {
         node.setIsCollapsed(!node.getIsCollapsed());
       }
     });
   };
+
+  const translationsLabel = comparisons.map((c) => c.translation).join(" / ");
 
   return (
     <>
@@ -264,24 +228,24 @@ function ScriptureBadge({
           contentEditable={false}
           className="scripture-badge-inline"
           onClick={handleToggle}
-          title={`Click to expand ${refText}`}
+          title={`Click to expand comparison ${refText}`}
         >
-          <span className="scripture-icon-bible">📖</span>
+          <span className="scripture-icon-bible">📚</span>
           <span className="scripture-ref-label">
-            {refText} ({translation})
+            {refText} ({translationsLabel})
           </span>
           <span className="scripture-icon-arrow">▾</span>
         </span>
       ) : (
         <span
           contentEditable={false}
-          className="scripture-card-expanded"
+          className="comparison-card-expanded"
           onClick={(e) => e.stopPropagation()}
         >
           <span className="scripture-card-header">
             <span className="scripture-card-title">
-              <span className="scripture-icon-bible">📖</span>
-              <span>{refText}</span>
+              <span className="scripture-icon-bible">📚</span>
+              <span>{refText} Comparison</span>
             </span>
             <button
               className="scripture-card-toggle"
@@ -292,25 +256,23 @@ function ScriptureBadge({
               <span className="scripture-icon-arrow expanded">▾</span>
             </button>
           </span>
-          <p className="scripture-card-text">
-            {loading ? (
-              <span style={{ opacity: 0.6 }}>Loading scripture...</span>
-            ) : (
-              text || "(No scripture text available)"
-            )}
-          </p>
-          <span className="scripture-card-translation">{translation}</span>
+          <div className="comparison-grid">
+            {comparisons.map((comp, idx) => (
+              <div key={idx} className="comparison-item">
+                <div className="comparison-item-header">
+                  <span className="comparison-translation-badge">
+                    {comp.translation}
+                  </span>
+                </div>
+                <p className="scripture-card-text">
+                  {'"'}
+                  {comp.text}
+                  {'"'}
+                </p>
+              </div>
+            ))}
+          </div>
         </span>
-      )}
-
-      {isError && !verseText && (
-        <div
-          className="scripture-toast-error"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span>Failed to fetch scripture ({translation})</span>
-          <button onClick={() => refetch()}>Retry</button>
-        </div>
       )}
     </>
   );

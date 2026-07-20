@@ -107,11 +107,11 @@ export function BibleComparison({
         </AppText>
       </View>
       
-      <View className="p-3 gap-y-3">
+      <View className="p-3 flex-col md:flex-row gap-3">
         {comparisons.map((comp, idx) => (
           <View
             key={idx}
-            className="p-3 rounded-lg bg-secondary/30 dark:bg-secondary/15 border border-border/60"
+            className="flex-1 p-3 rounded-lg bg-secondary/30 dark:bg-secondary/15 border border-border/60"
           >
             <View className="flex-row justify-between items-center mb-1.5">
               <View className="px-2 py-0.5 rounded bg-[#e4b022] dark:bg-[#d4af37]">

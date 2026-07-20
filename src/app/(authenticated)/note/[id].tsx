@@ -193,6 +193,32 @@ function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
         indent: 0,
         version: 1,
       });
+    } else if (block.type === "comparison" && block.comparisons) {
+      const match = parseScriptureRef(block.scriptureRef || block.content);
+      const usfm = match ? BOOK_NAME_TO_USFM[match.book] || "JHN" : "JHN";
+      const chapter = match ? match.chapter : 1;
+      const verseStart = match ? match.verseStart : 1;
+      const verseEnd = match ? match.verseEnd || match.verseStart : 1;
+
+      children.push({
+        type: "paragraph",
+        children: [
+          {
+            type: "comparison",
+            version: 1,
+            bookUSFM: usfm,
+            chapter,
+            verseStart,
+            verseEnd,
+            comparisons: block.comparisons,
+            isCollapsed: block.isCollapsed ?? true,
+          },
+        ],
+        direction: "ltr",
+        format: "",
+        indent: 0,
+        version: 1,
+      });
     }
   }
 
@@ -385,28 +411,21 @@ export default function SingleNoteEditorScreen() {
     const executeFetch = async () => {
       try {
         if (isInsertingComparison) {
-          // Comparison block inserts two version badges side-by-side
+          // Comparison block inserts a responsive comparison block containing two translations
           const [result1, result2] = await Promise.all([
             fetchSingle(chosenTranslation),
             fetchSingle(comparisonVersion),
           ]);
 
-          editorRef.current?.insertScripture({
+          editorRef.current?.insertComparison({
             bookUSFM: usfm,
             chapter: chap,
             verseStart: startV,
             verseEnd: endV,
-            translation: chosenTranslation,
-            verseText: result1.text,
-          });
-
-          editorRef.current?.insertScripture({
-            bookUSFM: usfm,
-            chapter: chap,
-            verseStart: startV,
-            verseEnd: endV,
-            translation: comparisonVersion,
-            verseText: result2.text,
+            comparisons: [
+              { translation: chosenTranslation, text: result1.text },
+              { translation: comparisonVersion, text: result2.text },
+            ],
           });
         } else {
           // Collapsible card block
