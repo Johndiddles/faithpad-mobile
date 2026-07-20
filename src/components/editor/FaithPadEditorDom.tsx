@@ -555,15 +555,17 @@ export default function FaithPadEditorDom({
     <QueryClientProvider client={localQueryClient}>
       <div className={`editor-container theme-${theme}`}>
         <LexicalComposer initialConfig={initialConfig}>
-          <RichTextPlugin
-            contentEditable={<ContentEditable className="editor-input" />}
-            placeholder={
-              <div className="editor-placeholder">
-                Type notes, or reference scriptures...
-              </div>
-            }
-            ErrorBoundary={({ children }: any) => <>{children}</>}
-          />
+          <div className="flex-1">
+            <RichTextPlugin
+              contentEditable={<ContentEditable className="editor-input" />}
+              placeholder={
+                <div className="editor-placeholder">
+                  Type notes, or reference scriptures...
+                </div>
+              }
+              ErrorBoundary={({ children }: any) => <>{children}</>}
+            />
+          </div>
           <HistoryPlugin />
           <InitialContentPlugin content={initialContent} />
           {onChange && <OnChangePlugin onChange={handleEditorChange} />}

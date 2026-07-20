@@ -337,7 +337,7 @@ body {
 }
 
 .scripture-icon-arrow {
-  font-size: 10px;
+  font-size: 20px;
   color: var(--badge-icon);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: inline-block;
@@ -385,10 +385,7 @@ body {
   color: var(--badge-text);
   font-size: 12px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
 }
 
@@ -515,4 +512,3 @@ body {
     flex-direction: row;
   }
 }
-

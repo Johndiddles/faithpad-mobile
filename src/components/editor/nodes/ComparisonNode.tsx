@@ -252,7 +252,7 @@ function ComparisonBadge({
               onClick={handleToggle}
               title="Click to collapse"
             >
-              <span>Collapse</span>
+              {/* <span>Collapse</span> */}
               <span className="scripture-icon-arrow expanded">▾</span>
             </button>
           </span>
