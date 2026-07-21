@@ -9,11 +9,16 @@ const generateId = () => Math.random().toString(36).substring(2, 15) + Math.rand
 interface AuthState {
   user: User | null;
   token: string | null;
-  signIn: (user: Partial<User>) => void;
-  signUp: (user: Partial<User>) => void;
+  signIn: (
+    user: { id: string; email: string; name: string; avatarUrl: string | null },
+    token: string,
+  ) => void;
   signOut: () => void;
   updateProfile: (displayName: string, avatarUrl: string | null) => void;
-  updateSettings: (translation: User['globalDefaultTranslation'], aiDetection: boolean) => void;
+  updateSettings: (
+    translation: User["globalDefaultTranslation"],
+    aiDetection: boolean,
+  ) => void;
 }
 
 interface NoteState {
@@ -206,34 +211,19 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
-      signIn: (userData) => {
+      signIn: (serverUser, serverToken) => {
         set({
           user: {
-            id: userData.id || 'u_temp_' + generateId(),
-            email: userData.email || 'guest@faithpad.org',
-            displayName: userData.displayName || 'Faith Pad User',
-            avatarUrl: userData.avatarUrl || null,
-            globalDefaultTranslation: userData.globalDefaultTranslation || 'ESV',
-            aiDetectionEnabled: userData.aiDetectionEnabled !== undefined ? userData.aiDetectionEnabled : true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          token: 'mock-jwt-token-' + generateId(),
-        });
-      },
-      signUp: (userData) => {
-        set({
-          user: {
-            id: 'u_' + generateId(),
-            email: userData.email!,
-            displayName: userData.displayName || 'New Believer',
-            avatarUrl: null,
-            globalDefaultTranslation: 'ESV',
+            id: serverUser.id,
+            email: serverUser.email,
+            displayName: serverUser.name || "Faith Pad User",
+            avatarUrl: serverUser.avatarUrl || null,
+            globalDefaultTranslation: "ESV",
             aiDetectionEnabled: true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           },
-          token: 'mock-jwt-token-' + generateId(),
+          token: serverToken,
         });
       },
       signOut: () => {
