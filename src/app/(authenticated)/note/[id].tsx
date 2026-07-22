@@ -1,37 +1,38 @@
-import React, { useState, useRef } from "react";
+import { Entypo, Ionicons } from "@expo/vector-icons";
+import { GlassView } from "expo-glass-effect";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  ActivityIndicator,
-  Alert,
   useColorScheme,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Entypo, Ionicons } from "@expo/vector-icons";
 // import { useForm } from "react-hook-form";
 // import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { useNotesStore, useAuthStore } from "../../../store";
-import { EditorBlock, BlockType } from "../../../lib/types";
-import { parseScriptureRef } from "../../../lib/bible";
 import { useQueryClient } from "@tanstack/react-query";
+import { parseScriptureRef } from "../../../lib/bible";
+import { BlockType, EditorBlock } from "../../../lib/types";
 import { fetchBiblePassage } from "../../../services/youversion";
+import { useAuthStore, useNotesStore } from "../../../store";
 // import { cn } from "@/lib/utils";
-import { Dropdown } from "@/components/ui/dropdown";
-import { BIBLE_METADATA } from "../../../lib/bible-metadata";
 import {
   FaithPadEditor,
   FaithPadEditorRef,
 } from "@/components/editor/FaithPadEditor";
+import { Dropdown } from "@/components/ui/dropdown";
 import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
+import { BIBLE_METADATA } from "../../../lib/bible-metadata";
 
 function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
   if (oldBlocks.length === 1 && oldBlocks[0].content.startsWith('{"root":')) {
@@ -624,134 +625,156 @@ export default function SingleNoteEditorScreen() {
         </View>
 
         {canEdit && (
-          <View className="flex-row items-center px-4 py-2.5 bg-secondary/85 dark:bg-secondary/40 border-t border-border">
-            {/* Docked Insert/Attachment Button on the Left */}
-            <Pressable
-              onPress={() => setInsertModalVisible(true)}
-              className="p-1.5 pr-3 border-r border-border/80 active:opacity-60 justify-center items-center"
-            >
-              <Entypo
-                name="attachment"
-                size={16}
-                color={theme === "dark" ? "#d4af37" : "#e4b022"}
-              />
-            </Pressable>
-
-            {/* Scrollable Formatting Options on the Right */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
+          <View
+            className="mx-4 mb-5 rounded-full border border-black/10 dark:border-white/15 bg-[#faf8f5]/95 dark:bg-zinc-900/90 shadow-2xl shadow-black/15 dark:shadow-black/70 overflow-hidden"
+            style={{
+              elevation: 8,
+              borderRadius: 9999,
+            }}
+          >
+            <GlassView
+              glassEffectStyle="regular"
+              colorScheme={theme === "dark" ? "dark" : "light"}
+              isInteractive={true}
+              className="flex-row items-center px-4 py-2 w-full"
+              style={{
+                flexDirection: "row",
                 alignItems: "center",
-                paddingLeft: 12,
-                paddingRight: 8,
-                columnGap: 16,
+                borderRadius: 9999,
+                width: "100%",
               }}
             >
-              {/* Bold */}
+              {/* Docked Insert/Attachment Button on the Left */}
               <Pressable
-                onPress={() => editorRef.current?.toggleBold()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+                onPress={() => setInsertModalVisible(true)}
+                className="py-4 px-4 pr-5.5 border-r border-border/70 active:opacity-60 justify-center items-center"
+                style={{ flexShrink: 0 }}
               >
-                <AppText weight="bold" className="text-foreground text-lg">
-                  B
-                </AppText>
-              </Pressable>
-
-              {/* Italic */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleItalic()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <AppText
-                  weight="medium"
-                  style={{ fontStyle: "italic" }}
-                  className="text-foreground text-lg"
-                >
-                  I
-                </AppText>
-              </Pressable>
-
-              {/* Underline */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleUnderline()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <AppText
-                  weight="medium"
-                  style={{ textDecorationLine: "underline" }}
-                  className="text-foreground text-lg"
-                >
-                  U
-                </AppText>
-              </Pressable>
-
-              {/* Strikethrough */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleStrikethrough()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <AppText
-                  weight="medium"
-                  style={{ textDecorationLine: "line-through" }}
-                  className="text-foreground text-lg"
-                >
-                  S
-                </AppText>
-              </Pressable>
-
-              {/* Bullet List */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleBulletList()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <Ionicons
-                  name="list-outline"
+                <Entypo
+                  name="attachment"
                   size={20}
-                  color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
-                />
-              </Pressable>
-
-              {/* Ordered List */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleOrderedList()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <Ionicons
-                  name="list-circle-outline"
-                  size={21}
-                  color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
-                />
-              </Pressable>
-
-              {/* Text Color */}
-              <Pressable
-                onPress={() => setTextColorModalVisible(true)}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <View className="items-center justify-center">
-                  <AppText
-                    weight="bold"
-                    className="text-foreground text-[15px] leading-none"
-                  >
-                    A
-                  </AppText>
-                  <View className="w-4 h-[3px] bg-[#e4b022] dark:bg-[#d4af37] rounded-sm mt-0.5" />
-                </View>
-              </Pressable>
-
-              {/* Highlight Color */}
-              <Pressable
-                onPress={() => setHighlightColorModalVisible(true)}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <Ionicons
-                  name="brush-outline"
-                  size={18}
                   color={theme === "dark" ? "#d4af37" : "#e4b022"}
                 />
               </Pressable>
-            </ScrollView>
+
+              {/* Scrollable Formatting Options on the Right */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="flex-1"
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  alignItems: "center",
+                  paddingLeft: 14,
+                  paddingRight: 10,
+                  columnGap: 18,
+                }}
+              >
+                {/* Bold */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleBold()}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <AppText weight="bold" className="text-foreground text-xl">
+                    B
+                  </AppText>
+                </Pressable>
+
+                {/* Italic */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleItalic()}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <AppText
+                    weight="medium"
+                    style={{ fontStyle: "italic" }}
+                    className="text-foreground text-xl"
+                  >
+                    I
+                  </AppText>
+                </Pressable>
+
+                {/* Underline */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleUnderline()}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <AppText
+                    weight="medium"
+                    style={{ textDecorationLine: "underline" }}
+                    className="text-foreground text-xl"
+                  >
+                    U
+                  </AppText>
+                </Pressable>
+
+                {/* Strikethrough */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleStrikethrough()}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <AppText
+                    weight="medium"
+                    style={{ textDecorationLine: "line-through" }}
+                    className="text-foreground text-xl"
+                  >
+                    S
+                  </AppText>
+                </Pressable>
+
+                {/* Bullet List */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleBulletList()}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <Ionicons
+                    name="list-outline"
+                    size={22}
+                    color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
+                  />
+                </Pressable>
+
+                {/* Ordered List */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleOrderedList()}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <Ionicons
+                    name="list-circle-outline"
+                    size={23}
+                    color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
+                  />
+                </Pressable>
+
+                {/* Text Color */}
+                <Pressable
+                  onPress={() => setTextColorModalVisible(true)}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <View className="items-center justify-center">
+                    <AppText
+                      weight="bold"
+                      className="text-foreground text-[17px] leading-none"
+                    >
+                      A
+                    </AppText>
+                    <View className="w-4 h-[3px] bg-[#e4b022] dark:bg-[#d4af37] rounded-sm mt-0.5" />
+                  </View>
+                </Pressable>
+
+                {/* Highlight Color */}
+                <Pressable
+                  onPress={() => setHighlightColorModalVisible(true)}
+                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                >
+                  <Ionicons
+                    name="brush-outline"
+                    size={20}
+                    color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                  />
+                </Pressable>
+              </ScrollView>
+            </GlassView>
           </View>
         )}
       </KeyboardAvoidingView>

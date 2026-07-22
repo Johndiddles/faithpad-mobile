@@ -17,10 +17,11 @@
   --editor-placeholder: rgba(44, 42, 41, 0.4);
 
   /* Floating Toolbar */
-  --tb-bg: rgba(250, 248, 245, 0.9);
-  --tb-border: rgba(224, 219, 209, 0.8);
+  --tb-bg: rgba(255, 255, 255, 0.75);
+  --tb-border: rgba(255, 255, 255, 0.6);
   --tb-shadow:
-    0 4px 20px -2px rgba(90, 80, 70, 0.15), 0 2px 8px -1px rgba(90, 80, 70, 0.1);
+    0 10px 30px -5px rgba(0, 0, 0, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
   --tb-btn-hover: rgba(232, 229, 221, 0.8);
   --tb-btn-active: rgba(220, 216, 206, 0.9);
   --tb-btn-text: #4a4644;
@@ -51,12 +52,13 @@
   --editor-placeholder: rgba(229, 229, 234, 0.4);
 
   /* Floating Toolbar */
-  --tb-bg: rgba(28, 28, 30, 0.9);
-  --tb-border: rgba(58, 58, 60, 0.8);
+  --tb-bg: rgba(24, 24, 27, 0.78);
+  --tb-border: rgba(255, 255, 255, 0.16);
   --tb-shadow:
-    0 4px 24px -2px rgba(0, 0, 0, 0.5), 0 2px 10px -1px rgba(0, 0, 0, 0.3);
-  --tb-btn-hover: rgba(44, 44, 46, 0.8);
-  --tb-btn-active: rgba(58, 58, 60, 0.9);
+    0 12px 36px -4px rgba(0, 0, 0, 0.6), 0 4px 14px -2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+  --tb-btn-hover: rgba(255, 255, 255, 0.1);
+  --tb-btn-active: rgba(255, 255, 255, 0.18);
   --tb-btn-text: #aeaeb2;
   --tb-btn-text-active: #d4af37;
 
@@ -206,10 +208,10 @@ body {
   background-color: var(--tb-bg);
   border: 1px solid var(--tb-border);
   box-shadow: var(--tb-shadow);
-  border-radius: 12px;
-  padding: 6px 8px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border-radius: 9999px;
+  padding: 6px 10px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   opacity: 0;
   transform: scale(0.95) translateY(5px);
   pointer-events: none;
