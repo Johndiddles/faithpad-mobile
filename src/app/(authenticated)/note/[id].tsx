@@ -193,6 +193,12 @@ export default function SingleNoteEditorScreen() {
   const [noteTitle, setNoteTitle] = useState(note?.title || "");
   const [syncStatus, setSyncStatus] = useState<"synced" | "syncing">("synced");
 
+  // Debounce and sync refs
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestTitleRef = useRef<string>(note?.title || "");
+  const latestBlocksRef = useRef<EditorBlock[]>(note?.blocks || []);
+  const isDirtyRef = useRef<boolean>(false);
+
   // Modals state
   // const [shareModalVisible, setShareModalVisible] = useState(false);
   const [manualBibleModalVisible, setManualBibleModalVisible] = useState(false);
@@ -289,6 +295,23 @@ export default function SingleNoteEditorScreen() {
     }
   }, [versionsData, bibleVersion]);
 
+  // Flush pending changes on unmount or noteId change
+  React.useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      if (isDirtyRef.current && noteId) {
+        updateNote(noteId, {
+          title: latestTitleRef.current || null,
+          blocks: latestBlocksRef.current,
+        });
+        isDirtyRef.current = false;
+      }
+    };
+  }, [noteId, updateNote]);
+
   if (!note) {
     return (
       <SafeAreaView className="flex-1 bg-background justify-center items-center">
@@ -313,24 +336,38 @@ export default function SingleNoteEditorScreen() {
   const canEdit =
     isOwner || (isShared && sharedRecord.permissionLevel === "EDIT");
 
-  // Local state initialized above
-
-  // Sync state changes back to store
-  const syncToCloud = (updatedBlocks: EditorBlock[], titleString: string) => {
+  // Sync state changes back to store (debounced 2 seconds of inactivity)
+  const scheduleDebouncedSync = (
+    updatedBlocks: EditorBlock[],
+    titleString: string,
+  ) => {
+    latestBlocksRef.current = updatedBlocks;
+    latestTitleRef.current = titleString;
+    isDirtyRef.current = true;
     setSyncStatus("syncing");
-    updateNote(note.id, {
-      title: titleString || null,
-      blocks: updatedBlocks,
-    });
-    // Simulate cloud sync lag
-    setTimeout(() => {
-      setSyncStatus("synced");
-    }, 600);
+
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+    }
+
+    syncTimerRef.current = setTimeout(() => {
+      if (isDirtyRef.current && note.id) {
+        updateNote(note.id, {
+          title: latestTitleRef.current || null,
+          blocks: latestBlocksRef.current,
+        });
+        isDirtyRef.current = false;
+        setTimeout(() => {
+          setSyncStatus("synced");
+        }, 300);
+      }
+      syncTimerRef.current = null;
+    }, 2000);
   };
 
   const handleTitleChange = (text: string) => {
     setNoteTitle(text);
-    syncToCloud(blocks, text);
+    scheduleDebouncedSync(blocks, text);
   };
 
   const handleEditorChange = (lexicalJson: string) => {
@@ -343,7 +380,7 @@ export default function SingleNoteEditorScreen() {
       },
     ];
     setBlocks(updated);
-    syncToCloud(updated, noteTitle);
+    scheduleDebouncedSync(updated, noteTitle);
   };
 
   // Manual Scripture Insertion

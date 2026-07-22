@@ -6,7 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, View } from "react-native";
-import { useAuthStore } from "../../store";
+import { useAuthStore, useNotesStore } from "../../store";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,7 +23,7 @@ export default function WelcomeScreen() {
     async (idToken: string) => {
       setGoogleLoading(true);
       try {
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5770/api/v1";
         const res = await fetch(`${apiUrl}/auth/google`, {
           method: "POST",
           headers: {
@@ -41,6 +41,7 @@ export default function WelcomeScreen() {
 
         const { token, user } = await res.json();
         signIn(user, token);
+        useNotesStore.getState().syncWithBackend();
       } catch (error: any) {
         console.error("Backend sign in error:", error);
         Alert.alert(

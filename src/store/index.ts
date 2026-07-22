@@ -2,6 +2,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { mmkvStorage } from '../lib/mmkv';
 import { User, Folder, Note, NoteShare } from '../lib/types';
+import {
+  fetchFoldersApi,
+  createFolderApi,
+  renameFolderApi,
+  deleteFolderApi,
+  fetchNotesApi,
+  createNoteApi,
+  updateNoteApi,
+  deleteNoteApi,
+  updateUserSettingsApi,
+} from "../services/api";
 
 // Helper to generate UUIDs
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -10,7 +21,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   signIn: (
-    user: { id: string; email: string; name: string; avatarUrl: string | null },
+    user: any,
     token: string,
   ) => void;
   signOut: () => void;
@@ -25,6 +36,9 @@ interface NoteState {
   folders: Folder[];
   notes: Note[];
   noteShares: NoteShare[];
+  
+  // Backend Sync
+  syncWithBackend: () => Promise<void>;
   
   // Folder Operations
   createFolder: (name: string) => Folder;
@@ -216,12 +230,12 @@ export const useAuthStore = create<AuthState>()(
           user: {
             id: serverUser.id,
             email: serverUser.email,
-            displayName: serverUser.name || "Faith Pad User",
+            displayName: serverUser.displayName || serverUser.name || "Faith Pad User",
             avatarUrl: serverUser.avatarUrl || null,
-            globalDefaultTranslation: "ESV",
-            aiDetectionEnabled: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            globalDefaultTranslation: serverUser.globalDefaultTranslation || "NLT",
+            aiDetectionEnabled: serverUser.aiDetectionEnabled ?? true,
+            createdAt: serverUser.createdAt || new Date().toISOString(),
+            updatedAt: serverUser.updatedAt || new Date().toISOString(),
           },
           token: serverToken,
         });
@@ -254,6 +268,9 @@ export const useAuthStore = create<AuthState>()(
             },
           };
         });
+        updateUserSettingsApi(translation, aiDetection).catch((err) =>
+          console.error("Failed to sync user settings to backend:", err)
+        );
       },
     }),
     {
@@ -270,6 +287,24 @@ export const useNotesStore = create<NoteState>()(
       notes: INITIAL_NOTES,
       noteShares: INITIAL_SHARES,
 
+      syncWithBackend: async () => {
+        try {
+          const [remoteFolders, remoteNotes] = await Promise.all([
+            fetchFoldersApi().catch(() => null),
+            fetchNotesApi().catch(() => null),
+          ]);
+
+          if (remoteFolders !== null) {
+            set({ folders: remoteFolders });
+          }
+          if (remoteNotes !== null) {
+            set({ notes: remoteNotes });
+          }
+        } catch (err) {
+          console.error("Error syncing with backend:", err);
+        }
+      },
+
       createFolder: (name) => {
         const newFolder: Folder = {
           id: 'f_' + generateId(),
@@ -281,6 +316,9 @@ export const useNotesStore = create<NoteState>()(
         set((state) => ({
           folders: [...state.folders, newFolder],
         }));
+        createFolderApi(newFolder.name, newFolder.id).catch((err) =>
+          console.error("Failed to sync new folder to backend:", err)
+        );
         return newFolder;
       },
 
@@ -290,6 +328,9 @@ export const useNotesStore = create<NoteState>()(
             f.id === id ? { ...f, name, updatedAt: new Date().toISOString() } : f
           ),
         }));
+        renameFolderApi(id, name).catch((err) =>
+          console.error("Failed to sync renamed folder to backend:", err)
+        );
       },
 
       deleteFolder: (id) => {
@@ -300,6 +341,9 @@ export const useNotesStore = create<NoteState>()(
             n.folderId === id ? { ...n, folderId: null, updatedAt: new Date().toISOString() } : n
           ),
         }));
+        deleteFolderApi(id).catch((err) =>
+          console.error("Failed to sync folder deletion to backend:", err)
+        );
       },
 
       createNote: (folderId, title = '') => {
@@ -322,22 +366,38 @@ export const useNotesStore = create<NoteState>()(
         set((state) => ({
           notes: [newNote, ...state.notes],
         }));
+        createNoteApi(newNote.folderId, newNote.title, newNote.id, newNote.blocks).catch((err) =>
+          console.error("Failed to sync new note to backend:", err)
+        );
         return newNote;
       },
 
       updateNote: (id, updates) => {
+        let updatedNote: Note | undefined;
         set((state) => ({
           notes: state.notes.map((n) => {
             if (n.id !== id) return n;
             const changes = typeof updates === 'function' ? updates(n) : updates;
-            return {
+            updatedNote = {
               ...n,
               ...changes,
               version: n.version + 1,
               updatedAt: new Date().toISOString(),
             };
+            return updatedNote;
           }),
         }));
+        if (updatedNote) {
+          const noteToSync: Note = updatedNote;
+          updateNoteApi(id, {
+            folderId: noteToSync.folderId,
+            title: noteToSync.title,
+            blocks: noteToSync.blocks,
+            version: noteToSync.version,
+          }).catch((err) =>
+            console.error("Failed to sync updated note to backend:", err)
+          );
+        }
       },
 
       deleteNote: (id) => {
@@ -345,6 +405,9 @@ export const useNotesStore = create<NoteState>()(
           notes: state.notes.filter((n) => n.id !== id),
           noteShares: state.noteShares.filter((s) => s.noteId !== id),
         }));
+        deleteNoteApi(id).catch((err) =>
+          console.error("Failed to sync note deletion to backend:", err)
+        );
       },
 
       moveNote: (id, folderId) => {
