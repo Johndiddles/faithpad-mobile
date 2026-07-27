@@ -26,6 +26,7 @@ import { useAuthStore, useNotesStore } from "../../../store";
 import {
   FaithPadEditor,
   FaithPadEditorRef,
+  ActiveFormats,
 } from "@/components/editor/FaithPadEditor";
 import { Dropdown } from "@/components/ui/dropdown";
 import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
@@ -252,6 +253,14 @@ export default function SingleNoteEditorScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === "dark" ? "dark" : "light";
   const editorRef = useRef<FaithPadEditorRef>(null);
+  const [activeFormats, setActiveFormats] = useState<ActiveFormats>({
+    isBold: false,
+    isItalic: false,
+    isUnderline: false,
+    isStrikethrough: false,
+    isBulletList: false,
+    isOrderedList: false,
+  });
 
   const textColors =
     theme === "dark"
@@ -667,6 +676,7 @@ export default function SingleNoteEditorScreen() {
               ref={editorRef}
               initialContent={initialEditorContent}
               onChange={handleEditorChange}
+              onFormatChange={setActiveFormats}
               theme={theme}
             />
           </View>
@@ -721,9 +731,20 @@ export default function SingleNoteEditorScreen() {
                 {/* Bold */}
                 <Pressable
                   onPress={() => editorRef.current?.toggleBold()}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isBold
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
-                  <AppText weight="bold" className="text-foreground text-xl">
+                  <AppText
+                    weight="bold"
+                    className={`text-xl ${
+                      activeFormats.isBold
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
+                  >
                     B
                   </AppText>
                 </Pressable>
@@ -731,12 +752,20 @@ export default function SingleNoteEditorScreen() {
                 {/* Italic */}
                 <Pressable
                   onPress={() => editorRef.current?.toggleItalic()}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isItalic
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <AppText
                     weight="medium"
                     style={{ fontStyle: "italic" }}
-                    className="text-foreground text-xl"
+                    className={`text-xl ${
+                      activeFormats.isItalic
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
                   >
                     I
                   </AppText>
@@ -745,12 +774,20 @@ export default function SingleNoteEditorScreen() {
                 {/* Underline */}
                 <Pressable
                   onPress={() => editorRef.current?.toggleUnderline()}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isUnderline
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <AppText
                     weight="medium"
                     style={{ textDecorationLine: "underline" }}
-                    className="text-foreground text-xl"
+                    className={`text-xl ${
+                      activeFormats.isUnderline
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
                   >
                     U
                   </AppText>
@@ -759,12 +796,20 @@ export default function SingleNoteEditorScreen() {
                 {/* Strikethrough */}
                 <Pressable
                   onPress={() => editorRef.current?.toggleStrikethrough()}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isStrikethrough
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <AppText
                     weight="medium"
                     style={{ textDecorationLine: "line-through" }}
-                    className="text-foreground text-xl"
+                    className={`text-xl ${
+                      activeFormats.isStrikethrough
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
                   >
                     S
                   </AppText>
@@ -773,52 +818,119 @@ export default function SingleNoteEditorScreen() {
                 {/* Bullet List */}
                 <Pressable
                   onPress={() => editorRef.current?.toggleBulletList()}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isBulletList
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <Ionicons
                     name="list-outline"
                     size={22}
-                    color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
+                    color={
+                      activeFormats.isBulletList
+                        ? Platform.OS === "ios"
+                          ? "#e4b022"
+                          : "#d4af37"
+                        : theme === "dark"
+                          ? "#e5e5ea"
+                          : "#2c2a29"
+                    }
                   />
                 </Pressable>
 
                 {/* Ordered List */}
                 <Pressable
                   onPress={() => editorRef.current?.toggleOrderedList()}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isOrderedList
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <Ionicons
                     name="list-circle-outline"
                     size={23}
-                    color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
+                    color={
+                      activeFormats.isOrderedList
+                        ? Platform.OS === "ios"
+                          ? "#e4b022"
+                          : "#d4af37"
+                        : theme === "dark"
+                          ? "#e5e5ea"
+                          : "#2c2a29"
+                    }
                   />
                 </Pressable>
 
                 {/* Text Color */}
                 <Pressable
                   onPress={() => setTextColorModalVisible(true)}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.textColor &&
+                    activeFormats.textColor !== "inherit" &&
+                    activeFormats.textColor !== "transparent" &&
+                    activeFormats.textColor !== ""
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <View className="items-center justify-center">
                     <AppText
                       weight="bold"
-                      className="text-foreground text-[17px] leading-none"
+                      className={`text-[17px] leading-none ${
+                        activeFormats.textColor &&
+                        activeFormats.textColor !== "inherit" &&
+                        activeFormats.textColor !== "transparent" &&
+                        activeFormats.textColor !== ""
+                          ? "text-[#e4b022] dark:text-[#d4af37]"
+                          : "text-foreground"
+                      }`}
                     >
                       A
                     </AppText>
-                    <View className="w-4 h-[3px] bg-[#e4b022] dark:bg-[#d4af37] rounded-sm mt-0.5" />
+                    <View
+                      className="w-4 h-[3px] rounded-sm mt-0.5"
+                      style={{
+                        backgroundColor:
+                          activeFormats.textColor &&
+                          activeFormats.textColor !== "inherit" &&
+                          activeFormats.textColor !== "transparent" &&
+                          activeFormats.textColor !== ""
+                            ? activeFormats.textColor
+                            : theme === "dark"
+                              ? "#d4af37"
+                              : "#e4b022",
+                      }}
+                    />
                   </View>
                 </Pressable>
 
                 {/* Highlight Color */}
                 <Pressable
                   onPress={() => setHighlightColorModalVisible(true)}
-                  className="w-10 h-10 justify-center items-center rounded-full active:bg-foreground/10"
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.highlightColor &&
+                    activeFormats.highlightColor !== "transparent" &&
+                    activeFormats.highlightColor !== ""
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
                 >
                   <Ionicons
                     name="brush-outline"
                     size={20}
-                    color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                    color={
+                      activeFormats.highlightColor &&
+                      activeFormats.highlightColor !== "transparent" &&
+                      activeFormats.highlightColor !== ""
+                        ? Platform.OS === "ios"
+                          ? "#e4b022"
+                          : "#d4af37"
+                        : theme === "dark"
+                          ? "#d4af37"
+                          : "#e4b022"
+                    }
                   />
                 </Pressable>
               </ScrollView>

@@ -20,6 +20,7 @@ import {
   ListItemNode,
   INSERT_UNORDERED_LIST_COMMAND,
   INSERT_ORDERED_LIST_COMMAND,
+  $isListNode,
 } from "@lexical/list";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import {
@@ -30,11 +31,25 @@ import {
   $createParagraphNode,
   $createTextNode,
 } from "lexical";
-import { $patchStyleText } from "@lexical/selection";
+import {
+  $patchStyleText,
+  $getSelectionStyleValueForProperty,
+} from "@lexical/selection";
 
 import { ScriptureNode, $createScriptureNode } from "./nodes/ScriptureNode";
 import { ComparisonNode, $createComparisonNode } from "./nodes/ComparisonNode";
 import "./FaithPadEditor.css";
+
+export interface ActiveFormats {
+  isBold: boolean;
+  isItalic: boolean;
+  isUnderline: boolean;
+  isStrikethrough: boolean;
+  isBulletList: boolean;
+  isOrderedList: boolean;
+  textColor?: string;
+  highlightColor?: string;
+}
 
 // Selection Formatting Constants
 const TEXT_COLORS_LIGHT = [
@@ -284,6 +299,95 @@ function CommandPlugin({ command }: CommandPluginProps) {
   return null;
 }
 
+// 2.7. Selection & Format Tracker Plugin
+interface FormatTrackerPluginProps {
+  onFormatChange?: (formats: ActiveFormats) => void;
+}
+
+function FormatTrackerPlugin({ onFormatChange }: FormatTrackerPluginProps) {
+  const [editor] = useLexicalComposerContext();
+
+  const updateFormats = useCallback(() => {
+    if (!onFormatChange) return;
+
+    editor.getEditorState().read(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        const isBold = selection.hasFormat("bold");
+        const isItalic = selection.hasFormat("italic");
+        const isUnderline = selection.hasFormat("underline");
+        const isStrikethrough = selection.hasFormat("strikethrough");
+
+        let isBulletList = false;
+        let isOrderedList = false;
+        const anchorNode = selection.anchor.getNode();
+        let parent: any = anchorNode;
+        while (parent !== null) {
+          if ($isListNode(parent)) {
+            const listType = parent.getListType();
+            if (listType === "bullet") {
+              isBulletList = true;
+            } else if (listType === "number") {
+              isOrderedList = true;
+            }
+            break;
+          }
+          parent = parent.getParent();
+        }
+
+        const textColor = $getSelectionStyleValueForProperty(
+          selection,
+          "color",
+          "",
+        );
+        const highlightColor = $getSelectionStyleValueForProperty(
+          selection,
+          "background-color",
+          "",
+        );
+
+        onFormatChange({
+          isBold,
+          isItalic,
+          isUnderline,
+          isStrikethrough,
+          isBulletList,
+          isOrderedList,
+          textColor,
+          highlightColor,
+        });
+      } else {
+        onFormatChange({
+          isBold: false,
+          isItalic: false,
+          isUnderline: false,
+          isStrikethrough: false,
+          isBulletList: false,
+          isOrderedList: false,
+        });
+      }
+    });
+  }, [editor, onFormatChange]);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      updateFormats();
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, [updateFormats]);
+
+  useEffect(() => {
+    return editor.registerUpdateListener(() => {
+      updateFormats();
+    });
+  }, [editor, updateFormats]);
+
+  return null;
+}
+
 // 3. Floating Toolbar Plugin (rendered inside the webview)
 interface FloatingToolbarPluginProps {
   theme: "light" | "dark";
@@ -293,6 +397,8 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
   const [editor] = useLexicalComposerContext();
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [isStrikethrough, setIsStrikethrough] = useState(false);
   const [showToolbar, setShowToolbar] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
 
@@ -328,6 +434,8 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
 
         setIsBold(selection.hasFormat("bold"));
         setIsItalic(selection.hasFormat("italic"));
+        setIsUnderline(selection.hasFormat("underline"));
+        setIsStrikethrough(selection.hasFormat("strikethrough"));
         setShowToolbar(true);
       } else {
         setShowToolbar(false);
@@ -361,6 +469,16 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
   const toggleItalic = (e: React.MouseEvent) => {
     e.preventDefault();
     editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
+  };
+
+  const toggleUnderline = (e: React.MouseEvent) => {
+    e.preventDefault();
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
+  };
+
+  const toggleStrikethrough = (e: React.MouseEvent) => {
+    e.preventDefault();
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough");
   };
 
   const handleTextColor = (e: React.MouseEvent, color: string) => {
@@ -420,6 +538,38 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
           }}
         >
           I
+        </span>
+      </button>
+      <button
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleUnderline}
+        className={`tb-btn ${isUnderline ? "active" : ""}`}
+        title="Underline"
+      >
+        <span
+          style={{
+            textDecoration: "underline",
+            fontSize: "15px",
+            fontWeight: "bold",
+          }}
+        >
+          U
+        </span>
+      </button>
+      <button
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggleStrikethrough}
+        className={`tb-btn ${isStrikethrough ? "active" : ""}`}
+        title="Strikethrough"
+      >
+        <span
+          style={{
+            textDecoration: "line-through",
+            fontSize: "15px",
+            fontWeight: "bold",
+          }}
+        >
+          S
         </span>
       </button>
 
@@ -529,6 +679,7 @@ function FloatingToolbarPlugin({ theme }: FloatingToolbarPluginProps) {
 interface FaithPadEditorDomProps {
   initialContent?: string;
   onChange?: (json: string) => void;
+  onFormatChange?: (formats: ActiveFormats) => void;
   theme?: "light" | "dark";
   registerApi?: (api: any) => void;
   command?: { id: string; type: string; value?: any } | null;
@@ -539,6 +690,7 @@ interface FaithPadEditorDomProps {
 export default function FaithPadEditorDom({
   initialContent,
   onChange,
+  onFormatChange,
   theme = "light",
   registerApi,
   command,
@@ -593,6 +745,7 @@ export default function FaithPadEditorDom({
           {onChange && <OnChangePlugin onChange={handleEditorChange} />}
           <BridgePlugin registerApi={registerApi} />
           <CommandPlugin command={command} />
+          <FormatTrackerPlugin onFormatChange={onFormatChange} />
           <FloatingToolbarPlugin theme={theme} />
         </LexicalComposer>
       </div>

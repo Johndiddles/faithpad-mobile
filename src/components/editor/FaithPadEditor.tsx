@@ -1,6 +1,8 @@
 import React, { useImperativeHandle, useState, forwardRef } from "react";
 import { View, StyleSheet } from "react-native";
-import FaithPadEditorDom from "./FaithPadEditorDom";
+import FaithPadEditorDom, { ActiveFormats } from "./FaithPadEditorDom";
+
+export type { ActiveFormats };
 
 export interface FaithPadEditorRef {
   toggleBold: () => void;
@@ -31,13 +33,14 @@ export interface FaithPadEditorRef {
 export interface FaithPadEditorProps {
   initialContent?: string;
   onChange?: (content: string) => void;
+  onFormatChange?: (formats: ActiveFormats) => void;
   theme?: "light" | "dark";
 }
 
 export const FaithPadEditor = forwardRef<
   FaithPadEditorRef,
   FaithPadEditorProps
->(({ initialContent, onChange, theme = "light" }, ref) => {
+>(({ initialContent, onChange, onFormatChange, theme = "light" }, ref) => {
   const [editorCommand, setEditorCommand] = useState<{
     id: string;
     type: string;
@@ -98,6 +101,7 @@ export const FaithPadEditor = forwardRef<
       <FaithPadEditorDom
         initialContent={initialContent}
         onChange={onChange}
+        onFormatChange={onFormatChange}
         theme={theme}
         command={editorCommand}
         dom={{
