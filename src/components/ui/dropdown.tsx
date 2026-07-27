@@ -6,10 +6,10 @@ import {
   FlatList,
   Modal,
   SafeAreaView,
-  KeyboardAvoidingView,
   Platform,
   useColorScheme,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
 import { AppText } from "./app-text";
@@ -106,7 +106,7 @@ export function Dropdown({
       >
         <View className="flex-1 bg-black/60 justify-end">
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            behavior="padding"
             className="bg-card rounded-t-3xl border-t border-border max-h-[80%]"
           >
             <SafeAreaView className="">
