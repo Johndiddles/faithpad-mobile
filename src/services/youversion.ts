@@ -27,7 +27,7 @@ export interface FetchPassageResult {
 }
 
 export async function fetchBiblePassage(
-  translation: string,
+  translation: number,
   bookUSFM: string,
   chapter: number,
   verseStart: number,

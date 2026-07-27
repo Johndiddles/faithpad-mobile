@@ -2,7 +2,7 @@ import { fetchBiblePassage } from "@/services/youversion";
 import { useQuery } from "@tanstack/react-query";
 
 export function useBiblePassageQuery(
-  translation: string,
+  translation: number,
   bookUSFM: string,
   chapter: number,
   verseStart: number,

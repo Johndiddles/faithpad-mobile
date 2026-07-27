@@ -16,7 +16,7 @@ export interface FaithPadEditorRef {
     chapter: number;
     verseStart: number;
     verseEnd?: number;
-    translation: string;
+    translation: any;
     verseText?: string;
   }) => void;
   insertComparison: (comparison: {

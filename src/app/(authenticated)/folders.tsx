@@ -280,7 +280,7 @@ export default function FoldersScreen() {
         </View>
 
         {/* Sync Status Badge */}
-        <View className="mt-8 mb-6 flex-row items-center justify-center p-3 rounded-xl bg-[#e4b022]/5 dark:bg-[#d4af37]/5 border border-[#e4b022]/10 dark:border-[#d4af37]/10">
+        {/* <View className="mt-8 mb-6 flex-row items-center justify-center p-3 rounded-xl bg-[#e4b022]/5 dark:bg-[#d4af37]/5 border border-[#e4b022]/10 dark:border-[#d4af37]/10">
           <View className="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-2.5 animate-pulse" />
           <AppText
             weight="medium"
@@ -288,7 +288,7 @@ export default function FoldersScreen() {
           >
             Synced with Cloud Edge Backend
           </AppText>
-        </View>
+        </View> */}
       </ScrollView>
 
       {/* iOS styled Bottom Toolbar */}

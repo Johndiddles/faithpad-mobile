@@ -10,14 +10,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { useAuthStore, useNotesStore } from "../../store";
+import { useAuthStore } from "../../store";
 import { Dropdown } from "@/components/ui/dropdown";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, updateSettings, signOut } = useAuthStore();
-  const { resetData } = useNotesStore();
 
   const handleUpdateTranslation = (translation: string) => {
     updateSettings(translation, user?.aiDetectionEnabled !== false);
@@ -29,36 +28,36 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleResetApp = () => {
-    if (Platform.OS === "web") {
-      if (
-        confirm(
-          "Are you sure you want to reset all mock notes and folders back to default?",
-        )
-      ) {
-        resetData();
-      }
-    } else {
-      Alert.alert(
-        "Reset App Data",
-        "Are you sure you want to reset all folders, notes, and sharing permissions back to default mock records?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Reset",
-            style: "destructive",
-            onPress: () => {
-              resetData();
-              Alert.alert(
-                "Reset Complete",
-                "Local mock database has been reset.",
-              );
-            },
-          },
-        ],
-      );
-    }
-  };
+  // const handleResetApp = () => {
+  //   if (Platform.OS === "web") {
+  //     if (
+  //       confirm(
+  //         "Are you sure you want to reset all mock notes and folders back to default?",
+  //       )
+  //     ) {
+  //       resetData();
+  //     }
+  //   } else {
+  //     Alert.alert(
+  //       "Reset App Data",
+  //       "Are you sure you want to reset all folders, notes, and sharing permissions back to default mock records?",
+  //       [
+  //         { text: "Cancel", style: "cancel" },
+  //         {
+  //           text: "Reset",
+  //           style: "destructive",
+  //           onPress: () => {
+  //             resetData();
+  //             Alert.alert(
+  //               "Reset Complete",
+  //               "Local mock database has been reset.",
+  //             );
+  //           },
+  //         },
+  //       ],
+  //     );
+  //   }
+  // };
 
   const handleLogOut = () => {
     if (Platform.OS === "web") {
@@ -87,13 +86,7 @@ export default function SettingsScreen() {
         label: `${v.abbreviation} - ${v.name}`,
         value: v.abbreviation,
       }))
-    : [
-        { label: "ESV", value: "ESV" },
-        { label: "NIV", value: "NIV" },
-        { label: "NLT", value: "NLT" },
-        { label: "AMP", value: "AMP" },
-        { label: "KJV", value: "KJV" },
-      ];
+    : [];
 
   return (
     <SafeAreaView
@@ -223,12 +216,12 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <Button
+          {/* <Button
             title="Reset Mock Note Records"
             variant="secondary"
             onPress={handleResetApp}
             className="w-full py-3 border-dashed border-muted-foreground/30"
-          />
+          /> */}
 
           <Button
             title="Log Out Account"

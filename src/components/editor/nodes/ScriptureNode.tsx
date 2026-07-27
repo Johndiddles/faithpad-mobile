@@ -16,7 +16,7 @@ export interface SerializedScriptureNode extends SerializedLexicalNode {
   chapter: number;
   verseStart: number;
   verseEnd: number;
-  translation: string;
+  translation: number;
   isCollapsed: boolean;
   verseText: string;
 }
@@ -29,7 +29,7 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
   __chapter: number;
   __verseStart: number;
   __verseEnd: number;
-  __translation: string;
+  __translation: number;
   __isCollapsed: boolean;
   __verseText: string;
 
@@ -55,7 +55,7 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
     chapter: number,
     verseStart: number,
     verseEnd: number,
-    translation: string,
+    translation: number,
     isCollapsed: boolean,
     verseText: string = "",
     key?: NodeKey,
@@ -125,7 +125,7 @@ class _ScriptureNode extends DecoratorNode<React.ReactNode> {
   getVerseEnd(): number {
     return this.__verseEnd;
   }
-  getTranslation(): string {
+  getTranslation(): number {
     return this.__translation;
   }
   getIsCollapsed(): boolean {
@@ -178,7 +178,7 @@ export function $createScriptureNode(
   chapter: number,
   verseStart: number,
   verseEnd: number,
-  translation: string,
+  translation: number,
   isCollapsed: boolean,
   verseText: string = "",
 ): _ScriptureNode {
@@ -206,7 +206,7 @@ interface ScriptureBadgeProps {
   chapter: number;
   verseStart: number;
   verseEnd: number;
-  translation: string;
+  translation: number;
   isCollapsed: boolean;
   verseText: string;
 }

@@ -3,8 +3,9 @@ import { GlassView } from "expo-glass-effect";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Modal,
   Platform,
   Pressable,
@@ -15,8 +16,6 @@ import {
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-// import { useForm } from "react-hook-form";
-// import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -24,7 +23,6 @@ import { parseScriptureRef } from "../../../lib/bible";
 import { BlockType, EditorBlock } from "../../../lib/types";
 import { fetchBiblePassage } from "../../../services/youversion";
 import { useAuthStore, useNotesStore } from "../../../store";
-// import { cn } from "@/lib/utils";
 import {
   FaithPadEditor,
   FaithPadEditorRef,
@@ -192,7 +190,40 @@ export default function SingleNoteEditorScreen() {
   // Local state - declared before conditional return to satisfy hook rules
   const [blocks, setBlocks] = useState<EditorBlock[]>(note?.blocks || []);
   const [noteTitle, setNoteTitle] = useState(note?.title || "");
-  const [syncStatus, setSyncStatus] = useState<"synced" | "syncing">("synced");
+  const [syncStatus, setSyncStatus] = useState<
+    "synced" | "syncing" | "unsynced"
+  >("synced");
+
+  const spinValueRef = useRef(new Animated.Value(0));
+  const [spin, setSpin] =
+    useState<Animated.AnimatedInterpolation<string | number>>();
+
+  React.useEffect(() => {
+    const spinValue = spinValueRef?.current;
+    if (syncStatus === "syncing") {
+      spinValue.setValue(0);
+      const animation = Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+      animation.start();
+      return () => animation.stop();
+    }
+  }, [syncStatus, spinValueRef]);
+
+  React.useEffect(() => {
+    const spinValue = spinValueRef?.current;
+    setSpin(
+      spinValue?.interpolate({
+        inputRange: [0, 1],
+        outputRange: ["0deg", "360deg"],
+      }),
+    );
+  }, [spinValueRef]);
 
   // Debounce and sync refs
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -213,8 +244,8 @@ export default function SingleNoteEditorScreen() {
   const [bibleChapter, setBibleChapter] = useState("3");
   const [bibleVerse, setBibleVerse] = useState("16");
   const [bibleVerseEnd, setBibleVerseEnd] = useState("16");
-  const [bibleVersion, setBibleVersion] = useState<string>("ESV");
-  const [comparisonVersion, setComparisonVersion] = useState<string>("AMP");
+  const [bibleVersion, setBibleVersion] = useState<string>("");
+  const [comparisonVersion, setComparisonVersion] = useState<string>("");
   const [isInsertingComparison, setIsInsertingComparison] = useState(false);
 
   // Theme & Lexical Editor State Refs
@@ -345,7 +376,7 @@ export default function SingleNoteEditorScreen() {
     latestBlocksRef.current = updatedBlocks;
     latestTitleRef.current = titleString;
     isDirtyRef.current = true;
-    setSyncStatus("syncing");
+    setSyncStatus("unsynced");
 
     if (syncTimerRef.current) {
       clearTimeout(syncTimerRef.current);
@@ -353,6 +384,7 @@ export default function SingleNoteEditorScreen() {
 
     syncTimerRef.current = setTimeout(() => {
       if (isDirtyRef.current && note.id) {
+        setSyncStatus("syncing");
         updateNote(note.id, {
           title: latestTitleRef.current || null,
           blocks: latestBlocksRef.current,
@@ -360,7 +392,7 @@ export default function SingleNoteEditorScreen() {
         isDirtyRef.current = false;
         setTimeout(() => {
           setSyncStatus("synced");
-        }, 300);
+        }, 500);
       }
       syncTimerRef.current = null;
     }, 2000);
@@ -395,9 +427,13 @@ export default function SingleNoteEditorScreen() {
     setManualBibleModalVisible(false);
 
     const fetchSingle = async (trans: string) => {
+      const versionId = versionsData?.find((v) => v.abbreviation === trans)?.id;
+      if (!versionId) {
+        throw new Error("Invalid bible translation");
+      }
       return queryClient.fetchQuery({
-        queryKey: ["biblePassage", trans, usfm, chap, startV, endV],
-        queryFn: () => fetchBiblePassage(trans, usfm, chap, startV, endV),
+        queryKey: ["biblePassage", versionId, usfm, chap, startV, endV],
+        queryFn: () => fetchBiblePassage(versionId, usfm, chap, startV, endV),
         staleTime: 1000 * 60 * 60 * 24, // 24 hours
       });
     };
@@ -568,19 +604,31 @@ export default function SingleNoteEditorScreen() {
         </Pressable>
 
         <View className="flex-row items-center gap-x-3.5">
-          <View className="flex-row items-center">
+          <View
+            className="flex-row items-center justify-center p-1"
+            accessibilityLabel={
+              syncStatus === "syncing"
+                ? "Syncing note"
+                : syncStatus === "synced"
+                  ? "Note synced"
+                  : "Note not synced"
+            }
+          >
             {syncStatus === "syncing" ? (
-              <ActivityIndicator
-                size="small"
-                color="#e4b022"
-                className="mr-1.5"
-              />
+              <Animated.View
+                style={{ transform: !!spin ? [{ rotate: spin }] : [] }}
+              >
+                <Ionicons
+                  name="sync-outline"
+                  size={20}
+                  color={Platform.OS === "ios" ? "#e4b022" : "#d4af37"}
+                />
+              </Animated.View>
+            ) : syncStatus === "synced" ? (
+              <Ionicons name="cloud-done" size={22} color="#10b981" />
             ) : (
-              <View className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+              <Ionicons name="cloud-outline" size={22} color="#9ca3af" />
             )}
-            <AppText className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              {syncStatus === "syncing" ? "Syncing" : "Synced"}
-            </AppText>
           </View>
 
           {/* {isOwner && (
@@ -1267,6 +1315,7 @@ export default function SingleNoteEditorScreen() {
                 options={chapterOptions}
                 onSelect={handleSelectChapter}
                 placeholder="Select Chapter"
+                layout="grid"
               />
 
               <View className="flex-row gap-x-4 mb-4">
@@ -1277,6 +1326,7 @@ export default function SingleNoteEditorScreen() {
                     options={startVerseOptions}
                     onSelect={handleSelectVerse}
                     placeholder="Start"
+                    layout="grid"
                   />
                 </View>
 
@@ -1287,6 +1337,7 @@ export default function SingleNoteEditorScreen() {
                     options={endVerseOptions}
                     onSelect={setBibleVerseEnd}
                     placeholder="End"
+                    layout="grid"
                   />
                 </View>
               </View>

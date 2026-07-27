@@ -143,7 +143,7 @@ function BridgePlugin({ registerApi }: BridgePluginProps) {
           chapter: number;
           verseStart: number;
           verseEnd?: number;
-          translation: string;
+          translation: any;
           verseText?: string;
         }) => {
           editor.focus();
