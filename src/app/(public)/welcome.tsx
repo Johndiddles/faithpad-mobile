@@ -2,29 +2,50 @@ import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { Ionicons } from "@expo/vector-icons";
 import * as Google from "expo-auth-session/providers/google";
+import { makeRedirectUri } from "expo-auth-session";
 import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert, Platform, View } from "react-native";
 import { useAuthStore, useNotesStore } from "../../store";
+import { API_URL, GOOGLE_CLIENT_ID } from "@/constants/env";
+import { updateUserSettingsApi } from "@/services/api";
+import { customFetch } from "@/services/customFetch";
+import DefaultTranslationModal from "@/components/welcome/DefaultTranslationModal";
 
 WebBrowser.maybeCompleteAuthSession();
+const redirectUri = makeRedirectUri({
+  scheme: "com.johndiddles.faithpad",
+});
 
 export default function WelcomeScreen() {
   const { signIn } = useAuthStore();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [pendingNewUser, setPendingNewUser] = useState<{
+    user: any;
+    token: string;
+  } | null>(null);
+  const [savingTranslation, setSavingTranslation] = useState(false);
 
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-  });
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
+    {
+      clientId: GOOGLE_CLIENT_ID,
+      iosClientId: GOOGLE_CLIENT_ID,
+      webClientId: GOOGLE_CLIENT_ID,
+      androidClientId: GOOGLE_CLIENT_ID,
+      redirectUri: Platform.OS === "android" ? redirectUri : undefined,
+    },
+    {
+      scheme: "com.johndiddles.faithpad",
+    },
+  );
 
   const handleBackendSignIn = useCallback(
     async (idToken: string) => {
       setGoogleLoading(true);
       try {
-        const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5770/api/v1";
-        const res = await fetch(`${apiUrl}/auth/google`, {
+        const apiUrl = API_URL;
+        const res = await customFetch(`${apiUrl}/auth/google`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -39,9 +60,15 @@ export default function WelcomeScreen() {
           );
         }
 
-        const { token, user } = await res.json();
-        signIn(user, token);
-        useNotesStore.getState().syncWithBackend();
+        const { token, user, isNewUser } = await res.json();
+
+        if (isNewUser) {
+          setPendingNewUser({ user, token });
+          // setSelectedTranslation(user.globalDefaultTranslation || "NLT");
+        } else {
+          signIn(user, token);
+          useNotesStore.getState().syncWithBackend();
+        }
       } catch (error: any) {
         console.error("Backend sign in error:", error);
         Alert.alert(
@@ -54,6 +81,34 @@ export default function WelcomeScreen() {
     },
     [signIn],
   );
+
+  const handleConfirmTranslation = async (translation: string) => {
+    if (!pendingNewUser) return;
+    setSavingTranslation(true);
+    try {
+      const updatedUser = {
+        ...pendingNewUser.user,
+        globalDefaultTranslation: translation,
+      };
+
+      signIn(updatedUser, pendingNewUser.token);
+
+      await updateUserSettingsApi(
+        translation,
+        updatedUser.aiDetectionEnabled ?? false,
+      ).catch((err) =>
+        console.error("Failed to update user translation setting:", err),
+      );
+
+      useNotesStore.getState().syncWithBackend();
+      setPendingNewUser(null);
+    } catch (err: any) {
+      console.error("Error finalizing setup:", err);
+      Alert.alert("Error", "Could not save your default translation.");
+    } finally {
+      setSavingTranslation(false);
+    }
+  };
 
   useEffect(() => {
     if (response?.type === "success") {
@@ -185,6 +240,14 @@ export default function WelcomeScreen() {
           </View>
         </View>
       </View>
+
+      {pendingNewUser !== null && (
+        <DefaultTranslationModal
+          isOpen={pendingNewUser !== null}
+          onConfirm={(value) => handleConfirmTranslation(value)}
+          savingTranslation={savingTranslation}
+        />
+      )}
     </View>
   );
 }

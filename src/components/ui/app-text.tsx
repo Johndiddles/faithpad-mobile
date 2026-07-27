@@ -12,11 +12,6 @@ export interface AppTextProps extends RNTextProps {
   className?: string;
 }
 
-/**
- * Global Font Family Configuration
- * Change these values to swap the font families across the entire application instantly.
- * Supports custom fonts loaded via expo-font.
- */
 const GLOBAL_FONT_FAMILIES = {
   sans: {
     light: Platform.select({
@@ -157,15 +152,11 @@ export function AppText({
 
   const textStyle: TextStyle = {
     fontFamily,
-    fontWeight: Platform.OS === "ios" ? fontWeightValue : undefined, // Android relies on fontFamily mapping
+    fontWeight: Platform.OS === "ios" ? fontWeightValue : undefined,
   };
 
-  // Add specific system rounded design on iOS
   if (variant === "rounded" && Platform.OS === "ios") {
-    // Use system rounded font configuration
     textStyle.fontFamily = "System";
-    // Native fontVariant or design can be set via system attributes but since we're using React Native,
-    // custom font weight matches standard system design.
   }
 
   return (

@@ -344,7 +344,7 @@ export default function FoldersScreen() {
               placeholder="e.g. Sermon Outlines"
               placeholderTextColor="hsl(var(--muted-foreground))"
               autoFocus
-              className="border border-border rounded-xl px-4 py-3 bg-background text-foreground text-base mb-2 font-sans"
+              className="border border-border rounded-xl px-4 py-3 bg-background text-foreground text-base mb-2"
             />
 
             {validationError ? (

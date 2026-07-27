@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ export function Dropdown({
   className,
   containerClassName,
 }: DropdownProps) {
+  const colorScheme = useColorScheme();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -85,8 +87,8 @@ export function Dropdown({
         <Ionicons
           name="chevron-down"
           size={18}
-          className="text-muted-foreground ml-2"
-          color="hsl(var(--muted-foreground))"
+          className="ml-2"
+          color={colorScheme === "dark" ? "#e4b022" : "#666666"}
         />
       </Pressable>
 
@@ -123,8 +125,7 @@ export function Dropdown({
                     <Ionicons
                       name="close"
                       size={24}
-                      className="text-foreground"
-                      color="hsl(var(--foreground))"
+                      color={colorScheme === "dark" ? "#eeeeee" : "#333333"}
                     />
                   </Pressable>
                 </View>

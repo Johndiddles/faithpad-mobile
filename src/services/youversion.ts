@@ -1,4 +1,5 @@
-import { useAuthStore } from "../store";
+import { API_URL } from "@/constants/env";
+import { customFetch } from "./customFetch";
 
 export interface BibleVersionDetail {
   id: number;
@@ -7,12 +8,8 @@ export interface BibleVersionDetail {
 }
 
 export async function fetchBibleVersions(): Promise<BibleVersionDetail[]> {
-  const token = useAuthStore.getState().token;
-  const response = await fetch("http://localhost:5770/api/v1/bible/versions", {
+  const response = await customFetch(`${API_URL}/bible/versions`, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token || ""}`,
-    },
   });
 
   if (!response.ok) {
@@ -36,12 +33,10 @@ export async function fetchBiblePassage(
   verseStart: number,
   verseEnd?: number,
 ): Promise<FetchPassageResult> {
-  const token = useAuthStore.getState().token;
-  const response = await fetch("http://localhost:5770/api/v1/bible/passage", {
+  const response = await customFetch(`${API_URL}/bible/passage`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token || ""}`,
     },
     body: JSON.stringify({
       translation,
@@ -51,8 +46,6 @@ export async function fetchBiblePassage(
       verseEnd,
     }),
   });
-
-  console.log(JSON.stringify(response, null, 2));
 
   if (!response.ok) {
     throw new Error("Failed to fetch Bible passage");

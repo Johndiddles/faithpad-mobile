@@ -1,8 +1,10 @@
 import { useAuthStore } from "../store";
 import { Folder, Note, EditorBlock } from "../lib/types";
+import { API_URL } from "@/constants/env";
+import { customFetch } from "./customFetch";
 
 const getApiUrl = () => {
-  return process.env.EXPO_PUBLIC_API_URL || "http://localhost:5770/api/v1";
+  return API_URL;
 };
 
 const getAuthHeaders = () => {
@@ -16,7 +18,7 @@ const getAuthHeaders = () => {
 // --- FOLDERS API ---
 
 export async function fetchFoldersApi(): Promise<Folder[]> {
-  const response = await fetch(`${getApiUrl()}/folders`, {
+  const response = await customFetch(`${getApiUrl()}/folders`, {
     method: "GET",
     headers: getAuthHeaders(),
   });
@@ -26,8 +28,11 @@ export async function fetchFoldersApi(): Promise<Folder[]> {
   return response.json();
 }
 
-export async function createFolderApi(name: string, id?: string): Promise<Folder> {
-  const response = await fetch(`${getApiUrl()}/folders`, {
+export async function createFolderApi(
+  name: string,
+  id?: string,
+): Promise<Folder> {
+  const response = await customFetch(`${getApiUrl()}/folders`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ id, name }),
@@ -38,8 +43,11 @@ export async function createFolderApi(name: string, id?: string): Promise<Folder
   return response.json();
 }
 
-export async function renameFolderApi(id: string, name: string): Promise<Folder> {
-  const response = await fetch(`${getApiUrl()}/folders/${id}`, {
+export async function renameFolderApi(
+  id: string,
+  name: string,
+): Promise<Folder> {
+  const response = await customFetch(`${getApiUrl()}/folders/${id}`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify({ name }),
@@ -50,8 +58,10 @@ export async function renameFolderApi(id: string, name: string): Promise<Folder>
   return response.json();
 }
 
-export async function deleteFolderApi(id: string): Promise<{ success: boolean }> {
-  const response = await fetch(`${getApiUrl()}/folders/${id}`, {
+export async function deleteFolderApi(
+  id: string,
+): Promise<{ success: boolean }> {
+  const response = await customFetch(`${getApiUrl()}/folders/${id}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -64,7 +74,7 @@ export async function deleteFolderApi(id: string): Promise<{ success: boolean }>
 // --- NOTES API ---
 
 export async function fetchNotesApi(): Promise<Note[]> {
-  const response = await fetch(`${getApiUrl()}/notes`, {
+  const response = await customFetch(`${getApiUrl()}/notes`, {
     method: "GET",
     headers: getAuthHeaders(),
   });
@@ -78,9 +88,9 @@ export async function createNoteApi(
   folderId: string | null,
   title?: string | null,
   id?: string,
-  blocks?: EditorBlock[]
+  blocks?: EditorBlock[],
 ): Promise<Note> {
-  const response = await fetch(`${getApiUrl()}/notes`, {
+  const response = await customFetch(`${getApiUrl()}/notes`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify({ id, folderId, title, blocks }),
@@ -98,9 +108,9 @@ export async function updateNoteApi(
     title?: string | null;
     blocks?: EditorBlock[];
     version?: number;
-  }
+  },
 ): Promise<Note> {
-  const response = await fetch(`${getApiUrl()}/notes/${id}`, {
+  const response = await customFetch(`${getApiUrl()}/notes/${id}`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify(updates),
@@ -112,7 +122,7 @@ export async function updateNoteApi(
 }
 
 export async function deleteNoteApi(id: string): Promise<{ success: boolean }> {
-  const response = await fetch(`${getApiUrl()}/notes/${id}`, {
+  const response = await customFetch(`${getApiUrl()}/notes/${id}`, {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
@@ -126,9 +136,9 @@ export async function deleteNoteApi(id: string): Promise<{ success: boolean }> {
 
 export async function updateUserSettingsApi(
   globalDefaultTranslation: string,
-  aiDetectionEnabled: boolean
+  aiDetectionEnabled: boolean,
 ): Promise<any> {
-  const response = await fetch(`${getApiUrl()}/users/settings`, {
+  const response = await customFetch(`${getApiUrl()}/users/settings`, {
     method: "PUT",
     headers: getAuthHeaders(),
     body: JSON.stringify({ globalDefaultTranslation, aiDetectionEnabled }),

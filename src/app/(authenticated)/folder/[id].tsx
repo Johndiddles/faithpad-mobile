@@ -139,7 +139,7 @@ export default function FolderNotesListScreen() {
             onChangeText={setSearchQuery}
             placeholder="Search notes, scriptures, blocks"
             placeholderTextColor="hsl(var(--muted-foreground))"
-            className="flex-1 text-base text-foreground font-sans p-0 m-0"
+            className="flex-1 text-base text-foreground p-0 m-0"
           />
           {searchQuery ? (
             <Pressable

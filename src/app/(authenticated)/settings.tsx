@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   View,
   Pressable,
@@ -9,61 +8,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuthStore, useNotesStore } from "../../store";
 import { Dropdown } from "@/components/ui/dropdown";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
 
-const profileSchema = z.object({
-  displayName: z
-    .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(30, "Name must be under 30 characters"),
-});
-
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, updateProfile, updateSettings, signOut } = useAuthStore();
+  const { user, updateSettings, signOut } = useAuthStore();
   const { resetData } = useNotesStore();
-
-  const [savingProfile, setSavingProfile] = useState(false);
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      displayName: user?.displayName || "",
-    },
-    resolver: async (data) => {
-      try {
-        const values = profileSchema.parse(data);
-        return { values, errors: {} };
-      } catch (err: any) {
-        const errors: any = {};
-        if (err instanceof z.ZodError) {
-          err.issues.forEach((e: any) => {
-            errors[e.path.join(".")] = { message: e.message };
-          });
-        }
-        return { values: {}, errors };
-      }
-    },
-  });
-
-  const handleSaveProfile = (data: any) => {
-    setSavingProfile(true);
-    setTimeout(() => {
-      updateProfile(data.displayName, user?.avatarUrl || null);
-      setSavingProfile(false);
-      Alert.alert("Success", "Profile updated successfully.");
-    }, 600);
-  };
 
   const handleUpdateTranslation = (translation: string) => {
     updateSettings(translation, user?.aiDetectionEnabled !== false);
@@ -146,7 +100,6 @@ export default function SettingsScreen() {
       className="flex-1 bg-background"
       edges={["top", "left", "right"]}
     >
-      {/* Navigation Header */}
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border/10">
         <Pressable
           onPress={() => router.back()}
@@ -162,11 +115,10 @@ export default function SettingsScreen() {
         <AppText weight="semibold" className="text-lg text-foreground">
           Settings
         </AppText>
-        <View className="w-12" /> {/* Spacer */}
+        <View className="w-12" />
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6">
-        {/* User Profile Info */}
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
@@ -174,21 +126,19 @@ export default function SettingsScreen() {
           User Account
         </AppText>
         <View className="bg-secondary/15 rounded-2xl border border-border p-4 mb-6">
-          <Controller
-            control={control}
-            name="displayName"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Full Name"
-                placeholder="e.g. John Diddles"
-                value={value}
-                onBlur={onBlur}
-                onChangeText={onChange}
-                error={errors.displayName?.message}
-                containerClassName="mb-3"
-              />
-            )}
-          />
+          <View className="mb-4">
+            <AppText
+              weight="medium"
+              className="text-sm text-foreground/80 mb-1"
+            >
+              Full Name
+            </AppText>
+            <View className="border border-border rounded-xl px-4 py-3 bg-secondary/30">
+              <AppText className="text-base text-muted-foreground">
+                {user?.displayName}
+              </AppText>
+            </View>
+          </View>
 
           <View className="mb-4">
             <AppText
@@ -198,22 +148,21 @@ export default function SettingsScreen() {
               Registered Email
             </AppText>
             <View className="border border-border rounded-xl px-4 py-3 bg-secondary/30">
-              <AppText className="text-base text-muted-foreground font-sans">
+              <AppText className="text-base text-muted-foreground">
                 {user?.email}
               </AppText>
             </View>
           </View>
 
-          <Button
+          {/* <Button
             title="Save Profile Updates"
             variant="gold"
             loading={savingProfile}
             onPress={handleSubmit(handleSaveProfile)}
             className="py-3"
-          />
+          /> */}
         </View>
 
-        {/* Bible Settings */}
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
@@ -221,7 +170,6 @@ export default function SettingsScreen() {
           Theological Tools
         </AppText>
         <View className="bg-secondary/15 rounded-2xl border border-border p-4 mb-6 gap-y-4">
-          {/* Default Translation Selection */}
           <View>
             <AppText
               weight="semibold"
@@ -237,7 +185,6 @@ export default function SettingsScreen() {
             />
           </View>
 
-          {/* AI Smart Scripture Detection Toggle */}
           <View className="flex-row items-center justify-between border-t border-border/60 pt-4">
             <View className="flex-1 pr-6">
               <AppText weight="semibold" className="text-sm text-foreground/90">
@@ -257,7 +204,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Database Sync Actions */}
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
