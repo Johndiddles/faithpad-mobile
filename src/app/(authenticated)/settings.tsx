@@ -178,18 +178,26 @@ export default function SettingsScreen() {
             />
           </View>
 
-          <View className="flex-row items-center justify-between border-t border-border/60 pt-4">
-            <View className="flex-1 pr-6">
-              <AppText weight="semibold" className="text-sm text-foreground/90">
-                AI Smart Detection
-              </AppText>
+          <View className="flex-row items-center justify-between border-t border-border/60 pt-4 opacity-60">
+            <View className="flex-1 pr-4">
+              <View className="flex-row items-center flex-wrap gap-1.5">
+                <AppText weight="semibold" className="text-sm text-foreground/90">
+                  AI Smart Detection
+                </AppText>
+                <View className="bg-[#e4b022]/15 dark:bg-[#d4af37]/20 px-2 py-0.5 rounded-full border border-[#e4b022]/30 dark:border-[#d4af37]/30">
+                  <AppText className="text-[10px] text-[#e4b022] dark:text-[#d4af37] font-bold uppercase tracking-wider">
+                    Coming Soon
+                  </AppText>
+                </View>
+              </View>
               <AppText className="text-xs text-muted-foreground mt-0.5">
                 Automatically convert references (e.g. Jn 3:16) to cards while
                 typing.
               </AppText>
             </View>
             <Switch
-              value={user?.aiDetectionEnabled !== false}
+              value={false}
+              disabled={true}
               onValueChange={handleToggleAi}
               trackColor={{ false: "hsl(var(--border))", true: "#e4b022" }}
               thumbColor={Platform.OS === "ios" ? undefined : "#fff"}
