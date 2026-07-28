@@ -180,6 +180,7 @@ export default function SingleNoteEditorScreen() {
   const {
     notes,
     updateNote,
+    deleteNote,
     noteShares,
     //  shareNote, removeShare
   } = useNotesStore();
@@ -239,6 +240,15 @@ export default function SingleNoteEditorScreen() {
   const [textColorModalVisible, setTextColorModalVisible] = useState(false);
   const [highlightColorModalVisible, setHighlightColorModalVisible] =
     useState(false);
+  const [deleteConfirmModalVisible, setDeleteConfirmModalVisible] =
+    useState(false);
+
+  const handleConfirmDeleteNote = () => {
+    if (!note) return;
+    deleteNote(note.id);
+    setDeleteConfirmModalVisible(false);
+    router.back();
+  };
 
   // Scripture Selection state
   const [bibleBook, setBibleBook] = useState("John");
@@ -640,19 +650,15 @@ export default function SingleNoteEditorScreen() {
             )}
           </View>
 
-          {/* {isOwner && (
+          {canEdit && (
             <Pressable
-              onPress={() => setShareModalVisible(true)}
+              onPress={() => setDeleteConfirmModalVisible(true)}
               className="p-2 bg-secondary/80 rounded-full active:opacity-60"
+              accessibilityLabel="Delete Note"
             >
-              <Ionicons
-                name="people-outline"
-                size={18}
-                className="text-[#e4b022] dark:text-[#d4af37]"
-                color={Platform.OS === "ios" ? "#e4b022" : "#d4af37"}
-              />
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
             </Pressable>
-          )} */}
+          )}
         </View>
       </View>
 
@@ -1489,6 +1495,52 @@ export default function SingleNoteEditorScreen() {
                 className="w-full py-4 mt-2"
               />
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteConfirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteConfirmModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-center items-center px-6">
+          <View className="bg-card w-full max-w-sm rounded-3xl p-6 border border-border shadow-2xl items-center">
+            <View className="w-14 h-14 rounded-full bg-red-500/15 dark:bg-red-500/20 justify-center items-center mb-4">
+              <Ionicons name="trash-outline" size={28} color="#ef4444" />
+            </View>
+
+            <AppText
+              weight="bold"
+              className="text-xl text-center text-foreground mb-2"
+            >
+              Delete Note?
+            </AppText>
+
+            <AppText className="text-sm text-muted-foreground text-center mb-6 leading-relaxed">
+              Are you sure you want to delete{" "}
+              <AppText weight="bold" className="text-foreground">
+                &quot;{noteTitle || "Untitled Note"}&quot;
+              </AppText>
+              ? This action is irreversible and cannot be undone.
+            </AppText>
+
+            <View className="flex-row gap-x-3 w-full">
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={() => setDeleteConfirmModalVisible(false)}
+                className="flex-1 py-3.5"
+              />
+              <Button
+                title="Delete"
+                variant="destructive"
+                onPress={handleConfirmDeleteNote}
+                className="flex-1 py-3.5"
+              />
+            </View>
           </View>
         </View>
       </Modal>
