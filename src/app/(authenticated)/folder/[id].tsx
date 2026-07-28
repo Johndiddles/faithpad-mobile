@@ -31,6 +31,8 @@ export default function FolderNotesListScreen() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [moveModalVisible, setMoveModalVisible] = useState(false);
+  const [deleteConfirmModalVisible, setDeleteConfirmModalVisible] =
+    useState(false);
 
   const folder = folders.find((f) => f.id === folderId);
   const folderTitle =
@@ -78,10 +80,15 @@ export default function FolderNotesListScreen() {
     setOptionsModalVisible(true);
   };
 
-  const handleDeleteNote = () => {
+  const handleDeleteNoteClick = () => {
+    setOptionsModalVisible(false);
+    setDeleteConfirmModalVisible(true);
+  };
+
+  const handleConfirmDeleteNote = () => {
     if (!selectedNote) return;
     deleteNote(selectedNote.id);
-    setOptionsModalVisible(false);
+    setDeleteConfirmModalVisible(false);
     setSelectedNote(null);
   };
 
@@ -139,7 +146,7 @@ export default function FolderNotesListScreen() {
             onChangeText={setSearchQuery}
             placeholder="Search notes, scriptures, blocks"
             placeholderTextColor="hsl(var(--muted-foreground))"
-            className="flex-1 text-base text-foreground font-sans p-0 m-0"
+            className="flex-1 text-base text-foreground p-0 m-0"
           />
           {searchQuery ? (
             <Pressable
@@ -284,7 +291,7 @@ export default function FolderNotesListScreen() {
                     color="white"
                   />
                 }
-                onPress={handleDeleteNote}
+                onPress={handleDeleteNoteClick}
                 className="w-full justify-start py-3.5"
                 textClassName="ml-2"
               />
@@ -293,6 +300,55 @@ export default function FolderNotesListScreen() {
                 variant="secondary"
                 onPress={() => setOptionsModalVisible(false)}
                 className="w-full py-3.5 mt-2"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal Screen */}
+      <Modal
+        visible={deleteConfirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteConfirmModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-center items-center px-6">
+          <View className="bg-card w-full max-w-sm rounded-3xl p-6 border border-border shadow-2xl items-center">
+            <View className="w-14 h-14 rounded-full bg-red-500/15 dark:bg-red-500/20 justify-center items-center mb-4">
+              <Ionicons name="trash-outline" size={28} color="#ef4444" />
+            </View>
+
+            <AppText
+              weight="bold"
+              className="text-xl text-center text-foreground mb-2"
+            >
+              Delete Note?
+            </AppText>
+
+            <AppText className="text-sm text-muted-foreground text-center mb-6 leading-relaxed">
+              Are you sure you want to delete{" "}
+              <AppText weight="bold" className="text-foreground">
+                &quot;{selectedNote?.title || "Untitled Note"}&quot;
+              </AppText>
+              ? This action is irreversible and cannot be undone.
+            </AppText>
+
+            <View className="flex-row gap-x-3 w-full">
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={() => {
+                  setDeleteConfirmModalVisible(false);
+                  setSelectedNote(null);
+                }}
+                className="flex-1 py-3.5"
+              />
+              <Button
+                title="Delete"
+                variant="destructive"
+                onPress={handleConfirmDeleteNote}
+                className="flex-1 py-3.5"
               />
             </View>
           </View>

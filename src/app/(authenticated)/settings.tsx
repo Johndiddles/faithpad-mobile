@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import {
   View,
   Pressable,
@@ -9,61 +8,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useForm, Controller } from "react-hook-form";
-import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAuthStore, useNotesStore } from "../../store";
+import { useAuthStore } from "../../store";
 import { Dropdown } from "@/components/ui/dropdown";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
 
-const profileSchema = z.object({
-  displayName: z
-    .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(30, "Name must be under 30 characters"),
-});
-
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, updateProfile, updateSettings, signOut } = useAuthStore();
-  const { resetData } = useNotesStore();
-
-  const [savingProfile, setSavingProfile] = useState(false);
-
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      displayName: user?.displayName || "",
-    },
-    resolver: async (data) => {
-      try {
-        const values = profileSchema.parse(data);
-        return { values, errors: {} };
-      } catch (err: any) {
-        const errors: any = {};
-        if (err instanceof z.ZodError) {
-          err.issues.forEach((e: any) => {
-            errors[e.path.join(".")] = { message: e.message };
-          });
-        }
-        return { values: {}, errors };
-      }
-    },
-  });
-
-  const handleSaveProfile = (data: any) => {
-    setSavingProfile(true);
-    setTimeout(() => {
-      updateProfile(data.displayName, user?.avatarUrl || null);
-      setSavingProfile(false);
-      Alert.alert("Success", "Profile updated successfully.");
-    }, 600);
-  };
+  const { user, updateSettings, signOut } = useAuthStore();
 
   const handleUpdateTranslation = (translation: string) => {
     updateSettings(translation, user?.aiDetectionEnabled !== false);
@@ -75,36 +28,36 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleResetApp = () => {
-    if (Platform.OS === "web") {
-      if (
-        confirm(
-          "Are you sure you want to reset all mock notes and folders back to default?",
-        )
-      ) {
-        resetData();
-      }
-    } else {
-      Alert.alert(
-        "Reset App Data",
-        "Are you sure you want to reset all folders, notes, and sharing permissions back to default mock records?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Reset",
-            style: "destructive",
-            onPress: () => {
-              resetData();
-              Alert.alert(
-                "Reset Complete",
-                "Local mock database has been reset.",
-              );
-            },
-          },
-        ],
-      );
-    }
-  };
+  // const handleResetApp = () => {
+  //   if (Platform.OS === "web") {
+  //     if (
+  //       confirm(
+  //         "Are you sure you want to reset all mock notes and folders back to default?",
+  //       )
+  //     ) {
+  //       resetData();
+  //     }
+  //   } else {
+  //     Alert.alert(
+  //       "Reset App Data",
+  //       "Are you sure you want to reset all folders, notes, and sharing permissions back to default mock records?",
+  //       [
+  //         { text: "Cancel", style: "cancel" },
+  //         {
+  //           text: "Reset",
+  //           style: "destructive",
+  //           onPress: () => {
+  //             resetData();
+  //             Alert.alert(
+  //               "Reset Complete",
+  //               "Local mock database has been reset.",
+  //             );
+  //           },
+  //         },
+  //       ],
+  //     );
+  //   }
+  // };
 
   const handleLogOut = () => {
     if (Platform.OS === "web") {
@@ -133,20 +86,13 @@ export default function SettingsScreen() {
         label: `${v.abbreviation} - ${v.name}`,
         value: v.abbreviation,
       }))
-    : [
-        { label: "ESV", value: "ESV" },
-        { label: "NIV", value: "NIV" },
-        { label: "NLT", value: "NLT" },
-        { label: "AMP", value: "AMP" },
-        { label: "KJV", value: "KJV" },
-      ];
+    : [];
 
   return (
     <SafeAreaView
       className="flex-1 bg-background"
       edges={["top", "left", "right"]}
     >
-      {/* Navigation Header */}
       <View className="flex-row items-center justify-between px-4 py-2 border-b border-border/10">
         <Pressable
           onPress={() => router.back()}
@@ -162,11 +108,10 @@ export default function SettingsScreen() {
         <AppText weight="semibold" className="text-lg text-foreground">
           Settings
         </AppText>
-        <View className="w-12" /> {/* Spacer */}
+        <View className="w-12" />
       </View>
 
       <ScrollView className="flex-1 px-6 pt-6">
-        {/* User Profile Info */}
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
@@ -174,21 +119,19 @@ export default function SettingsScreen() {
           User Account
         </AppText>
         <View className="bg-secondary/15 rounded-2xl border border-border p-4 mb-6">
-          <Controller
-            control={control}
-            name="displayName"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Full Name"
-                placeholder="e.g. John Diddles"
-                value={value}
-                onBlur={onBlur}
-                onChangeText={onChange}
-                error={errors.displayName?.message}
-                containerClassName="mb-3"
-              />
-            )}
-          />
+          <View className="mb-4">
+            <AppText
+              weight="medium"
+              className="text-sm text-foreground/80 mb-1"
+            >
+              Full Name
+            </AppText>
+            <View className="border border-border rounded-xl px-4 py-3 bg-secondary/30">
+              <AppText className="text-base text-muted-foreground">
+                {user?.displayName}
+              </AppText>
+            </View>
+          </View>
 
           <View className="mb-4">
             <AppText
@@ -198,22 +141,21 @@ export default function SettingsScreen() {
               Registered Email
             </AppText>
             <View className="border border-border rounded-xl px-4 py-3 bg-secondary/30">
-              <AppText className="text-base text-muted-foreground font-sans">
+              <AppText className="text-base text-muted-foreground">
                 {user?.email}
               </AppText>
             </View>
           </View>
 
-          <Button
+          {/* <Button
             title="Save Profile Updates"
             variant="gold"
             loading={savingProfile}
             onPress={handleSubmit(handleSaveProfile)}
             className="py-3"
-          />
+          /> */}
         </View>
 
-        {/* Bible Settings */}
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
@@ -221,7 +163,6 @@ export default function SettingsScreen() {
           Theological Tools
         </AppText>
         <View className="bg-secondary/15 rounded-2xl border border-border p-4 mb-6 gap-y-4">
-          {/* Default Translation Selection */}
           <View>
             <AppText
               weight="semibold"
@@ -237,19 +178,26 @@ export default function SettingsScreen() {
             />
           </View>
 
-          {/* AI Smart Scripture Detection Toggle */}
-          <View className="flex-row items-center justify-between border-t border-border/60 pt-4">
-            <View className="flex-1 pr-6">
-              <AppText weight="semibold" className="text-sm text-foreground/90">
-                AI Smart Detection
-              </AppText>
+          <View className="flex-row items-center justify-between border-t border-border/60 pt-4 opacity-60">
+            <View className="flex-1 pr-4">
+              <View className="flex-row items-center flex-wrap gap-1.5">
+                <AppText weight="semibold" className="text-sm text-foreground/90">
+                  AI Smart Detection
+                </AppText>
+                <View className="bg-[#e4b022]/15 dark:bg-[#d4af37]/20 px-2 py-0.5 rounded-full border border-[#e4b022]/30 dark:border-[#d4af37]/30">
+                  <AppText className="text-[10px] text-[#e4b022] dark:text-[#d4af37] font-bold uppercase tracking-wider">
+                    Coming Soon
+                  </AppText>
+                </View>
+              </View>
               <AppText className="text-xs text-muted-foreground mt-0.5">
                 Automatically convert references (e.g. Jn 3:16) to cards while
                 typing.
               </AppText>
             </View>
             <Switch
-              value={user?.aiDetectionEnabled !== false}
+              value={false}
+              disabled={true}
               onValueChange={handleToggleAi}
               trackColor={{ false: "hsl(var(--border))", true: "#e4b022" }}
               thumbColor={Platform.OS === "ios" ? undefined : "#fff"}
@@ -257,7 +205,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Database Sync Actions */}
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
@@ -277,12 +224,12 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <Button
+          {/* <Button
             title="Reset Mock Note Records"
             variant="secondary"
             onPress={handleResetApp}
             className="w-full py-3 border-dashed border-muted-foreground/30"
-          />
+          /> */}
 
           <Button
             title="Log Out Account"

@@ -6,9 +6,10 @@ import {
   FlatList,
   Modal,
   SafeAreaView,
-  KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
 import { AppText } from "./app-text";
@@ -29,6 +30,8 @@ export interface DropdownProps {
   error?: string;
   className?: string;
   containerClassName?: string;
+  layout?: "list" | "grid";
+  numColumns?: number;
 }
 
 export function Dropdown({
@@ -42,7 +45,10 @@ export function Dropdown({
   error,
   className,
   containerClassName,
+  layout = "list",
+  numColumns = 5,
 }: DropdownProps) {
+  const colorScheme = useColorScheme();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -75,7 +81,7 @@ export function Dropdown({
       >
         <AppText
           className={cn(
-            "text-base font-sans flex-1",
+            "text-base flex-1",
             selectedOption ? "text-foreground" : "text-muted-foreground",
           )}
           numberOfLines={1}
@@ -85,8 +91,8 @@ export function Dropdown({
         <Ionicons
           name="chevron-down"
           size={18}
-          className="text-muted-foreground ml-2"
-          color="hsl(var(--muted-foreground))"
+          className="ml-2"
+          color={colorScheme === "dark" ? "#e4b022" : "#666666"}
         />
       </Pressable>
 
@@ -104,7 +110,7 @@ export function Dropdown({
       >
         <View className="flex-1 bg-black/60 justify-end">
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            behavior="padding"
             className="bg-card rounded-t-3xl border-t border-border max-h-[80%]"
           >
             <SafeAreaView className="">
@@ -123,8 +129,7 @@ export function Dropdown({
                     <Ionicons
                       name="close"
                       size={24}
-                      className="text-foreground"
-                      color="hsl(var(--foreground))"
+                      color={colorScheme === "dark" ? "#eeeeee" : "#333333"}
                     />
                   </Pressable>
                 </View>
@@ -142,7 +147,7 @@ export function Dropdown({
                       onChangeText={setSearchQuery}
                       placeholder={searchPlaceholder}
                       placeholderTextColor="hsl(var(--muted-foreground))"
-                      className="flex-1 text-base text-foreground font-sans p-0 m-0"
+                      className="flex-1 text-base text-foreground p-0 m-0"
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
@@ -163,10 +168,47 @@ export function Dropdown({
                 )}
 
                 <FlatList
+                  key={layout === "grid" ? `grid-${numColumns}` : "list-1"}
                   data={filteredOptions}
+                  numColumns={layout === "grid" ? numColumns : 1}
                   keyExtractor={(item) => item.value}
+                  columnWrapperStyle={
+                    layout === "grid"
+                      ? { justifyContent: "flex-start", gap: 8, marginBottom: 8 }
+                      : undefined
+                  }
                   renderItem={({ item }) => {
                     const isSelected = item.value === value;
+                    if (layout === "grid") {
+                      return (
+                        <Pressable
+                          onPress={() => {
+                            onSelect(item.value);
+                            setIsOpen(false);
+                            setSearchQuery("");
+                          }}
+                          className={cn(
+                            "h-12 flex-1 items-center justify-center rounded-xl border",
+                            isSelected
+                              ? "bg-[#e4b022] dark:bg-[#d4af37] border-[#e4b022] dark:border-[#d4af37]"
+                              : "bg-secondary/30 border-border/50 active:bg-secondary/70",
+                          )}
+                          style={{ minWidth: "17%", maxWidth: "18.5%" }}
+                        >
+                          <AppText
+                            weight={isSelected ? "bold" : "semibold"}
+                            className={cn(
+                              "text-base text-center",
+                              isSelected
+                                ? "text-black dark:text-black"
+                                : "text-foreground",
+                            )}
+                          >
+                            {item.label}
+                          </AppText>
+                        </Pressable>
+                      );
+                    }
                     return (
                       <Pressable
                         onPress={() => {
@@ -205,7 +247,9 @@ export function Dropdown({
                       </Pressable>
                     );
                   }}
-                  className="max-h-[300px]"
+                  className={cn(
+                    layout === "grid" ? "max-h-[360px]" : "max-h-[300px]",
+                  )}
                   contentContainerStyle={{ paddingBottom: 20 }}
                   ListEmptyComponent={
                     <View className="py-8 items-center justify-center">

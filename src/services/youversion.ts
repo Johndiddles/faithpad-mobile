@@ -1,3 +1,6 @@
+import { API_URL } from "@/constants/env";
+import { customFetch } from "./customFetch";
+
 export interface BibleVersionDetail {
   id: number;
   abbreviation: string;
@@ -5,7 +8,7 @@ export interface BibleVersionDetail {
 }
 
 export async function fetchBibleVersions(): Promise<BibleVersionDetail[]> {
-  const response = await fetch("http://localhost:5770/api/v1/bible/versions", {
+  const response = await customFetch(`${API_URL}/bible/versions`, {
     method: "GET",
   });
 
@@ -24,13 +27,13 @@ export interface FetchPassageResult {
 }
 
 export async function fetchBiblePassage(
-  translation: string,
+  translation: number,
   bookUSFM: string,
   chapter: number,
   verseStart: number,
   verseEnd?: number,
 ): Promise<FetchPassageResult> {
-  const response = await fetch("http://localhost:5770/api/v1/bible/passage", {
+  const response = await customFetch(`${API_URL}/bible/passage`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

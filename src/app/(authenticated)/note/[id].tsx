@@ -1,37 +1,37 @@
-import React, { useState, useRef } from "react";
+import { Entypo, Ionicons } from "@expo/vector-icons";
+import { GlassView } from "expo-glass-effect";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
 import {
-  View,
+  Alert,
+  Animated,
+  Easing,
+  Modal,
+  Platform,
   Pressable,
   ScrollView,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  ActivityIndicator,
-  Alert,
   useColorScheme,
+  View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Entypo, Ionicons } from "@expo/vector-icons";
-// import { useForm } from "react-hook-form";
-// import { z } from "zod";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { useNotesStore, useAuthStore } from "../../../store";
-import { EditorBlock, BlockType } from "../../../lib/types";
-import { parseScriptureRef } from "../../../lib/bible";
 import { useQueryClient } from "@tanstack/react-query";
+import { parseScriptureRef } from "../../../lib/bible";
+import { BlockType, EditorBlock } from "../../../lib/types";
 import { fetchBiblePassage } from "../../../services/youversion";
-// import { cn } from "@/lib/utils";
-import { Dropdown } from "@/components/ui/dropdown";
-import { BIBLE_METADATA } from "../../../lib/bible-metadata";
+import { useAuthStore, useNotesStore } from "../../../store";
 import {
   FaithPadEditor,
   FaithPadEditorRef,
+  ActiveFormats,
 } from "@/components/editor/FaithPadEditor";
+import { Dropdown } from "@/components/ui/dropdown";
 import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
+import { BIBLE_METADATA } from "../../../lib/bible-metadata";
 
 function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
   if (oldBlocks.length === 1 && oldBlocks[0].content.startsWith('{"root":')) {
@@ -180,6 +180,7 @@ export default function SingleNoteEditorScreen() {
   const {
     notes,
     updateNote,
+    deleteNote,
     noteShares,
     //  shareNote, removeShare
   } = useNotesStore();
@@ -191,7 +192,46 @@ export default function SingleNoteEditorScreen() {
   // Local state - declared before conditional return to satisfy hook rules
   const [blocks, setBlocks] = useState<EditorBlock[]>(note?.blocks || []);
   const [noteTitle, setNoteTitle] = useState(note?.title || "");
-  const [syncStatus, setSyncStatus] = useState<"synced" | "syncing">("synced");
+  const [syncStatus, setSyncStatus] = useState<
+    "synced" | "syncing" | "unsynced"
+  >("synced");
+
+  const spinValueRef = useRef(new Animated.Value(0));
+  const [spin, setSpin] =
+    useState<Animated.AnimatedInterpolation<string | number>>();
+
+  React.useEffect(() => {
+    const spinValue = spinValueRef?.current;
+    if (syncStatus === "syncing") {
+      spinValue.setValue(0);
+      const animation = Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+      animation.start();
+      return () => animation.stop();
+    }
+  }, [syncStatus, spinValueRef]);
+
+  React.useEffect(() => {
+    const spinValue = spinValueRef?.current;
+    setSpin(
+      spinValue?.interpolate({
+        inputRange: [0, 1],
+        outputRange: ["0deg", "360deg"],
+      }),
+    );
+  }, [spinValueRef]);
+
+  // Debounce and sync refs
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestTitleRef = useRef<string>(note?.title || "");
+  const latestBlocksRef = useRef<EditorBlock[]>(note?.blocks || []);
+  const isDirtyRef = useRef<boolean>(false);
 
   // Modals state
   // const [shareModalVisible, setShareModalVisible] = useState(false);
@@ -200,20 +240,37 @@ export default function SingleNoteEditorScreen() {
   const [textColorModalVisible, setTextColorModalVisible] = useState(false);
   const [highlightColorModalVisible, setHighlightColorModalVisible] =
     useState(false);
+  const [deleteConfirmModalVisible, setDeleteConfirmModalVisible] =
+    useState(false);
+
+  const handleConfirmDeleteNote = () => {
+    if (!note) return;
+    deleteNote(note.id);
+    setDeleteConfirmModalVisible(false);
+    router.back();
+  };
 
   // Scripture Selection state
   const [bibleBook, setBibleBook] = useState("John");
   const [bibleChapter, setBibleChapter] = useState("3");
   const [bibleVerse, setBibleVerse] = useState("16");
   const [bibleVerseEnd, setBibleVerseEnd] = useState("16");
-  const [bibleVersion, setBibleVersion] = useState<string>("ESV");
-  const [comparisonVersion, setComparisonVersion] = useState<string>("AMP");
+  const [bibleVersion, setBibleVersion] = useState<string>("");
+  const [comparisonVersion, setComparisonVersion] = useState<string>("");
   const [isInsertingComparison, setIsInsertingComparison] = useState(false);
 
   // Theme & Lexical Editor State Refs
   const colorScheme = useColorScheme();
   const theme = colorScheme === "dark" ? "dark" : "light";
   const editorRef = useRef<FaithPadEditorRef>(null);
+  const [activeFormats, setActiveFormats] = useState<ActiveFormats>({
+    isBold: false,
+    isItalic: false,
+    isUnderline: false,
+    isStrikethrough: false,
+    isBulletList: false,
+    isOrderedList: false,
+  });
 
   const textColors =
     theme === "dark"
@@ -289,6 +346,23 @@ export default function SingleNoteEditorScreen() {
     }
   }, [versionsData, bibleVersion]);
 
+  // Flush pending changes on unmount or noteId change
+  React.useEffect(() => {
+    return () => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      if (isDirtyRef.current && noteId) {
+        updateNote(noteId, {
+          title: latestTitleRef.current || null,
+          blocks: latestBlocksRef.current,
+        });
+        isDirtyRef.current = false;
+      }
+    };
+  }, [noteId, updateNote]);
+
   if (!note) {
     return (
       <SafeAreaView className="flex-1 bg-background justify-center items-center">
@@ -313,24 +387,39 @@ export default function SingleNoteEditorScreen() {
   const canEdit =
     isOwner || (isShared && sharedRecord.permissionLevel === "EDIT");
 
-  // Local state initialized above
+  // Sync state changes back to store (debounced 2 seconds of inactivity)
+  const scheduleDebouncedSync = (
+    updatedBlocks: EditorBlock[],
+    titleString: string,
+  ) => {
+    latestBlocksRef.current = updatedBlocks;
+    latestTitleRef.current = titleString;
+    isDirtyRef.current = true;
+    setSyncStatus("unsynced");
 
-  // Sync state changes back to store
-  const syncToCloud = (updatedBlocks: EditorBlock[], titleString: string) => {
-    setSyncStatus("syncing");
-    updateNote(note.id, {
-      title: titleString || null,
-      blocks: updatedBlocks,
-    });
-    // Simulate cloud sync lag
-    setTimeout(() => {
-      setSyncStatus("synced");
-    }, 600);
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+    }
+
+    syncTimerRef.current = setTimeout(() => {
+      if (isDirtyRef.current && note.id) {
+        setSyncStatus("syncing");
+        updateNote(note.id, {
+          title: latestTitleRef.current || null,
+          blocks: latestBlocksRef.current,
+        });
+        isDirtyRef.current = false;
+        setTimeout(() => {
+          setSyncStatus("synced");
+        }, 500);
+      }
+      syncTimerRef.current = null;
+    }, 2000);
   };
 
   const handleTitleChange = (text: string) => {
     setNoteTitle(text);
-    syncToCloud(blocks, text);
+    scheduleDebouncedSync(blocks, text);
   };
 
   const handleEditorChange = (lexicalJson: string) => {
@@ -343,7 +432,7 @@ export default function SingleNoteEditorScreen() {
       },
     ];
     setBlocks(updated);
-    syncToCloud(updated, noteTitle);
+    scheduleDebouncedSync(updated, noteTitle);
   };
 
   // Manual Scripture Insertion
@@ -357,9 +446,13 @@ export default function SingleNoteEditorScreen() {
     setManualBibleModalVisible(false);
 
     const fetchSingle = async (trans: string) => {
+      const versionId = versionsData?.find((v) => v.abbreviation === trans)?.id;
+      if (!versionId) {
+        throw new Error("Invalid bible translation");
+      }
       return queryClient.fetchQuery({
-        queryKey: ["biblePassage", trans, usfm, chap, startV, endV],
-        queryFn: () => fetchBiblePassage(trans, usfm, chap, startV, endV),
+        queryKey: ["biblePassage", versionId, usfm, chap, startV, endV],
+        queryFn: () => fetchBiblePassage(versionId, usfm, chap, startV, endV),
         staleTime: 1000 * 60 * 60 * 24, // 24 hours
       });
     };
@@ -530,41 +623,49 @@ export default function SingleNoteEditorScreen() {
         </Pressable>
 
         <View className="flex-row items-center gap-x-3.5">
-          <View className="flex-row items-center">
+          <View
+            className="flex-row items-center justify-center p-1"
+            accessibilityLabel={
+              syncStatus === "syncing"
+                ? "Syncing note"
+                : syncStatus === "synced"
+                  ? "Note synced"
+                  : "Note not synced"
+            }
+          >
             {syncStatus === "syncing" ? (
-              <ActivityIndicator
-                size="small"
-                color="#e4b022"
-                className="mr-1.5"
-              />
+              <Animated.View
+                style={{ transform: !!spin ? [{ rotate: spin }] : [] }}
+              >
+                <Ionicons
+                  name="sync-outline"
+                  size={20}
+                  color={Platform.OS === "ios" ? "#e4b022" : "#d4af37"}
+                />
+              </Animated.View>
+            ) : syncStatus === "synced" ? (
+              <Ionicons name="cloud-done" size={22} color="#10b981" />
             ) : (
-              <View className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" />
+              <Ionicons name="cloud-outline" size={22} color="#9ca3af" />
             )}
-            <AppText className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              {syncStatus === "syncing" ? "Syncing" : "Synced"}
-            </AppText>
           </View>
 
-          {/* {isOwner && (
+          {canEdit && (
             <Pressable
-              onPress={() => setShareModalVisible(true)}
+              onPress={() => setDeleteConfirmModalVisible(true)}
               className="p-2 bg-secondary/80 rounded-full active:opacity-60"
+              accessibilityLabel="Delete Note"
             >
-              <Ionicons
-                name="people-outline"
-                size={18}
-                className="text-[#e4b022] dark:text-[#d4af37]"
-                color={Platform.OS === "ios" ? "#e4b022" : "#d4af37"}
-              />
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
             </Pressable>
-          )} */}
+          )}
         </View>
       </View>
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior="padding"
         className="flex-1"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        keyboardVerticalOffset={0}
       >
         <View className="flex-1 px-6 pt-4">
           <TextInput
@@ -581,140 +682,265 @@ export default function SingleNoteEditorScreen() {
               ref={editorRef}
               initialContent={initialEditorContent}
               onChange={handleEditorChange}
+              onFormatChange={setActiveFormats}
               theme={theme}
             />
           </View>
         </View>
 
         {canEdit && (
-          <View className="flex-row items-center px-4 py-2.5 bg-secondary/85 dark:bg-secondary/40 border-t border-border">
-            {/* Docked Insert/Attachment Button on the Left */}
-            <Pressable
-              onPress={() => setInsertModalVisible(true)}
-              className="p-1.5 pr-3 border-r border-border/80 active:opacity-60 justify-center items-center"
-            >
-              <Entypo
-                name="attachment"
-                size={16}
-                color={theme === "dark" ? "#d4af37" : "#e4b022"}
-              />
-            </Pressable>
-
-            {/* Scrollable Formatting Options on the Right */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{
+          <View
+            className="mx-4 mb-5 rounded-full border border-black/10 dark:border-white/15 bg-[#faf8f5]/95 dark:bg-zinc-900/90 shadow-2xl shadow-black/15 dark:shadow-black/70 overflow-hidden"
+            style={{
+              elevation: 8,
+              borderRadius: 9999,
+            }}
+          >
+            <GlassView
+              glassEffectStyle="regular"
+              colorScheme={theme === "dark" ? "dark" : "light"}
+              isInteractive={true}
+              className="flex-row items-center px-4 py-2 w-full"
+              style={{
+                flexDirection: "row",
                 alignItems: "center",
-                paddingLeft: 12,
-                paddingRight: 8,
-                columnGap: 16,
+                borderRadius: 9999,
+                width: "100%",
               }}
             >
-              {/* Bold */}
+              {/* Docked Insert/Attachment Button on the Left */}
               <Pressable
-                onPress={() => editorRef.current?.toggleBold()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
+                onPress={() => setInsertModalVisible(true)}
+                className="py-4 px-4 pr-5.5 border-r border-border/70 active:opacity-60 justify-center items-center"
+                style={{ flexShrink: 0 }}
               >
-                <AppText weight="bold" className="text-foreground text-lg">
-                  B
-                </AppText>
-              </Pressable>
-
-              {/* Italic */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleItalic()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <AppText
-                  weight="medium"
-                  style={{ fontStyle: "italic" }}
-                  className="text-foreground text-lg"
-                >
-                  I
-                </AppText>
-              </Pressable>
-
-              {/* Underline */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleUnderline()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <AppText
-                  weight="medium"
-                  style={{ textDecorationLine: "underline" }}
-                  className="text-foreground text-lg"
-                >
-                  U
-                </AppText>
-              </Pressable>
-
-              {/* Strikethrough */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleStrikethrough()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <AppText
-                  weight="medium"
-                  style={{ textDecorationLine: "line-through" }}
-                  className="text-foreground text-lg"
-                >
-                  S
-                </AppText>
-              </Pressable>
-
-              {/* Bullet List */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleBulletList()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <Ionicons
-                  name="list-outline"
+                <Entypo
+                  name="attachment"
                   size={20}
-                  color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
-                />
-              </Pressable>
-
-              {/* Ordered List */}
-              <Pressable
-                onPress={() => editorRef.current?.toggleOrderedList()}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <Ionicons
-                  name="list-circle-outline"
-                  size={21}
-                  color={theme === "dark" ? "#e5e5ea" : "#2c2a29"}
-                />
-              </Pressable>
-
-              {/* Text Color */}
-              <Pressable
-                onPress={() => setTextColorModalVisible(true)}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <View className="items-center justify-center">
-                  <AppText
-                    weight="bold"
-                    className="text-foreground text-[15px] leading-none"
-                  >
-                    A
-                  </AppText>
-                  <View className="w-4 h-[3px] bg-[#e4b022] dark:bg-[#d4af37] rounded-sm mt-0.5" />
-                </View>
-              </Pressable>
-
-              {/* Highlight Color */}
-              <Pressable
-                onPress={() => setHighlightColorModalVisible(true)}
-                className="w-8 h-8 justify-center items-center rounded active:bg-muted"
-              >
-                <Ionicons
-                  name="brush-outline"
-                  size={18}
                   color={theme === "dark" ? "#d4af37" : "#e4b022"}
                 />
               </Pressable>
-            </ScrollView>
+
+              {/* Scrollable Formatting Options on the Right */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                className="flex-1"
+                style={{ flex: 1 }}
+                contentContainerStyle={{
+                  alignItems: "center",
+                  paddingLeft: 14,
+                  paddingRight: 10,
+                  columnGap: 18,
+                }}
+              >
+                {/* Bold */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleBold()}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isBold
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <AppText
+                    weight="bold"
+                    className={`text-xl ${
+                      activeFormats.isBold
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
+                  >
+                    B
+                  </AppText>
+                </Pressable>
+
+                {/* Italic */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleItalic()}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isItalic
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <AppText
+                    weight="medium"
+                    style={{ fontStyle: "italic" }}
+                    className={`text-xl ${
+                      activeFormats.isItalic
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
+                  >
+                    I
+                  </AppText>
+                </Pressable>
+
+                {/* Underline */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleUnderline()}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isUnderline
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <AppText
+                    weight="medium"
+                    style={{ textDecorationLine: "underline" }}
+                    className={`text-xl ${
+                      activeFormats.isUnderline
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
+                  >
+                    U
+                  </AppText>
+                </Pressable>
+
+                {/* Strikethrough */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleStrikethrough()}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isStrikethrough
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <AppText
+                    weight="medium"
+                    style={{ textDecorationLine: "line-through" }}
+                    className={`text-xl ${
+                      activeFormats.isStrikethrough
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-foreground"
+                    }`}
+                  >
+                    S
+                  </AppText>
+                </Pressable>
+
+                {/* Bullet List */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleBulletList()}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isBulletList
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <Ionicons
+                    name="list-outline"
+                    size={22}
+                    color={
+                      activeFormats.isBulletList
+                        ? Platform.OS === "ios"
+                          ? "#e4b022"
+                          : "#d4af37"
+                        : theme === "dark"
+                          ? "#e5e5ea"
+                          : "#2c2a29"
+                    }
+                  />
+                </Pressable>
+
+                {/* Ordered List */}
+                <Pressable
+                  onPress={() => editorRef.current?.toggleOrderedList()}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.isOrderedList
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <Ionicons
+                    name="list-circle-outline"
+                    size={23}
+                    color={
+                      activeFormats.isOrderedList
+                        ? Platform.OS === "ios"
+                          ? "#e4b022"
+                          : "#d4af37"
+                        : theme === "dark"
+                          ? "#e5e5ea"
+                          : "#2c2a29"
+                    }
+                  />
+                </Pressable>
+
+                {/* Text Color */}
+                <Pressable
+                  onPress={() => setTextColorModalVisible(true)}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.textColor &&
+                    activeFormats.textColor !== "inherit" &&
+                    activeFormats.textColor !== "transparent" &&
+                    activeFormats.textColor !== ""
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <View className="items-center justify-center">
+                    <AppText
+                      weight="bold"
+                      className={`text-[17px] leading-none ${
+                        activeFormats.textColor &&
+                        activeFormats.textColor !== "inherit" &&
+                        activeFormats.textColor !== "transparent" &&
+                        activeFormats.textColor !== ""
+                          ? "text-[#e4b022] dark:text-[#d4af37]"
+                          : "text-foreground"
+                      }`}
+                    >
+                      A
+                    </AppText>
+                    <View
+                      className="w-4 h-[3px] rounded-sm mt-0.5"
+                      style={{
+                        backgroundColor:
+                          activeFormats.textColor &&
+                          activeFormats.textColor !== "inherit" &&
+                          activeFormats.textColor !== "transparent" &&
+                          activeFormats.textColor !== ""
+                            ? activeFormats.textColor
+                            : theme === "dark"
+                              ? "#d4af37"
+                              : "#e4b022",
+                      }}
+                    />
+                  </View>
+                </Pressable>
+
+                {/* Highlight Color */}
+                <Pressable
+                  onPress={() => setHighlightColorModalVisible(true)}
+                  className={`w-10 h-10 justify-center items-center rounded-full ${
+                    activeFormats.highlightColor &&
+                    activeFormats.highlightColor !== "transparent" &&
+                    activeFormats.highlightColor !== ""
+                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                      : "active:bg-foreground/10"
+                  }`}
+                >
+                  <Ionicons
+                    name="brush-outline"
+                    size={20}
+                    color={
+                      activeFormats.highlightColor &&
+                      activeFormats.highlightColor !== "transparent" &&
+                      activeFormats.highlightColor !== ""
+                        ? Platform.OS === "ios"
+                          ? "#e4b022"
+                          : "#d4af37"
+                        : theme === "dark"
+                          ? "#d4af37"
+                          : "#e4b022"
+                    }
+                  />
+                </Pressable>
+              </ScrollView>
+            </GlassView>
           </View>
         )}
       </KeyboardAvoidingView>
@@ -1207,6 +1433,7 @@ export default function SingleNoteEditorScreen() {
                 options={chapterOptions}
                 onSelect={handleSelectChapter}
                 placeholder="Select Chapter"
+                layout="grid"
               />
 
               <View className="flex-row gap-x-4 mb-4">
@@ -1217,6 +1444,7 @@ export default function SingleNoteEditorScreen() {
                     options={startVerseOptions}
                     onSelect={handleSelectVerse}
                     placeholder="Start"
+                    layout="grid"
                   />
                 </View>
 
@@ -1227,6 +1455,7 @@ export default function SingleNoteEditorScreen() {
                     options={endVerseOptions}
                     onSelect={setBibleVerseEnd}
                     placeholder="End"
+                    layout="grid"
                   />
                 </View>
               </View>
@@ -1266,6 +1495,52 @@ export default function SingleNoteEditorScreen() {
                 className="w-full py-4 mt-2"
               />
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteConfirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteConfirmModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/60 justify-center items-center px-6">
+          <View className="bg-card w-full max-w-sm rounded-3xl p-6 border border-border shadow-2xl items-center">
+            <View className="w-14 h-14 rounded-full bg-red-500/15 dark:bg-red-500/20 justify-center items-center mb-4">
+              <Ionicons name="trash-outline" size={28} color="#ef4444" />
+            </View>
+
+            <AppText
+              weight="bold"
+              className="text-xl text-center text-foreground mb-2"
+            >
+              Delete Note?
+            </AppText>
+
+            <AppText className="text-sm text-muted-foreground text-center mb-6 leading-relaxed">
+              Are you sure you want to delete{" "}
+              <AppText weight="bold" className="text-foreground">
+                &quot;{noteTitle || "Untitled Note"}&quot;
+              </AppText>
+              ? This action is irreversible and cannot be undone.
+            </AppText>
+
+            <View className="flex-row gap-x-3 w-full">
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={() => setDeleteConfirmModalVisible(false)}
+                className="flex-1 py-3.5"
+              />
+              <Button
+                title="Delete"
+                variant="destructive"
+                onPress={handleConfirmDeleteNote}
+                className="flex-1 py-3.5"
+              />
+            </View>
           </View>
         </View>
       </Modal>
