@@ -17,7 +17,8 @@ export async function fetchBibleVersions(): Promise<BibleVersionDetail[]> {
   }
 
   const data = await response.json();
-  return data;
+  console.log(JSON.stringify({ data }, null, 2));
+  return data.data;
 }
 
 export interface FetchPassageResult {

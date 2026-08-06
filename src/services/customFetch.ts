@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { useAuthStore } from "../store";
 
 export async function customFetch(
@@ -19,19 +20,31 @@ export async function customFetch(
 
   const response = await fetch(input, modifiedInit);
 
-  try {
-    const clone = response.clone();
-    const data = await clone.json();
-    if (
-      data &&
-      typeof data === "object" &&
-      typeof data.token === "string" &&
-      data.token.trim().length > 0
-    ) {
-      useAuthStore.getState().setToken(data.token);
+  if (response.status === 401) {
+    const currentToken = useAuthStore.getState().token;
+    if (currentToken) {
+      useAuthStore.getState().signOut();
+      Alert.alert(
+        "Session Expired",
+        "Your session has expired. Please log in again to sync your notes.",
+      );
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (err) {}
+  } else {
+    try {
+      const clone = response.clone();
+      const data = await clone.json();
+      if (
+        data &&
+        typeof data === "object" &&
+        typeof data.token === "string" &&
+        data.token.trim().length > 0
+      ) {
+        useAuthStore.getState().setToken(data.token);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {}
+  }
 
   return response;
 }
+

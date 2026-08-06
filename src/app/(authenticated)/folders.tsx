@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   Alert,
+  // ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -15,12 +16,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { useAuthStore, useNotesStore } from "../../store";
+import { useFoldersQuery } from "@/queries/useFolders";
 
 export default function FoldersScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const {
-    folders,
+    folders: storeFolders,
     notes,
     createFolder,
     renameFolder,
@@ -28,10 +30,27 @@ export default function FoldersScreen() {
     createNote,
   } = useNotesStore();
 
+  const foldersQuery = useFoldersQuery();
+  const queryFolders = foldersQuery?.data?.pages.flatMap((page) => page.data);
+  const displayFolders = queryFolders ?? storeFolders;
+
   const [modalVisible, setModalVisible] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState("");
+
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
+    if (
+      isCloseToBottom &&
+      foldersQuery.hasNextPage &&
+      !foldersQuery.isFetchingNextPage
+    ) {
+      foldersQuery.fetchNextPage();
+    }
+  };
 
   // Calculate note counts
   const totalNotesCount = notes.length;
@@ -114,7 +133,11 @@ export default function FoldersScreen() {
         </Pressable>
       </View>
 
-      <ScrollView className="flex-1 px-6">
+      <ScrollView
+        className="flex-1 px-6"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* Core Sections */}
         <View className="mt-4 bg-secondary/20 dark:bg-secondary/10 rounded-2xl border border-border overflow-hidden">
           {/* All Notes Row */}
@@ -186,7 +209,7 @@ export default function FoldersScreen() {
           </Pressable>
 
           {/* Dynamic Folders */}
-          {folders.map((folder) => (
+          {displayFolders?.map((folder) => (
             <View
               key={folder.id}
               className="border-b border-border flex-row items-center"
@@ -227,7 +250,6 @@ export default function FoldersScreen() {
                 </View>
               </Pressable>
 
-              {/* Context Actions (Rename / Delete) */}
               <View className="flex-row pr-3 gap-x-2">
                 <Pressable
                   onPress={() => handleOpenRenameModal(folder.id, folder.name)}

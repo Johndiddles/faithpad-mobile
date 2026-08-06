@@ -1,7 +1,8 @@
 import { useAuthStore } from "../store";
-import { Folder, Note, EditorBlock } from "../lib/types";
+import { Folder, Note, EditorBlock, PaginatedResponse } from "../lib/types";
 import { API_URL } from "@/constants/env";
 import { customFetch } from "./customFetch";
+import { queryClient } from "@/lib/queryClient";
 
 const getApiUrl = () => {
   return API_URL;
@@ -17,15 +18,53 @@ const getAuthHeaders = () => {
 
 // --- FOLDERS API ---
 
-export async function fetchFoldersApi(): Promise<Folder[]> {
-  const response = await customFetch(`${getApiUrl()}/folders`, {
-    method: "GET",
-    headers: getAuthHeaders(),
+export async function fetchFoldersApi(
+  page: number = 1,
+  limit: number = 20,
+): Promise<PaginatedResponse<Folder>> {
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
   });
+
+  const response = await customFetch(
+    `${getApiUrl()}/folders?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
+    },
+  );
   if (!response.ok) {
     throw new Error("Failed to fetch folders");
   }
-  return response.json();
+  return await response.json();
+  // console.log(JSON.stringify({ fetchFoldersApiResult: result }, null, 2));
+  // if (Array.isArray(result)) {
+  //   return {
+  //     success: true,
+  //     data: result,
+  //     pagination: {
+  //       page,
+  //       limit,
+  //       totalItems: result.length,
+  //       totalPages: 1,
+  //       hasNextPage: false,
+  //       hasPrevPage: false,
+  //     },
+  //   };
+  // }
+  // return {
+  //   success: result.success ?? true,
+  //   data: Array.isArray(result.data) ? result.data : result.folders || [],
+  //   pagination: result.pagination || {
+  //     page,
+  //     limit,
+  //     totalItems: Array.isArray(result.data) ? result.data.length : 0,
+  //     totalPages: 1,
+  //     hasNextPage: false,
+  //     hasPrevPage: false,
+  //   },
+  // };
 }
 
 export async function createFolderApi(
@@ -40,7 +79,9 @@ export async function createFolderApi(
   if (!response.ok) {
     throw new Error("Failed to create folder");
   }
-  return response.json();
+  const resData = await response.json();
+  queryClient.invalidateQueries({ queryKey: ["folders"] });
+  return resData.data || resData;
 }
 
 export async function renameFolderApi(
@@ -55,7 +96,9 @@ export async function renameFolderApi(
   if (!response.ok) {
     throw new Error("Failed to rename folder");
   }
-  return response.json();
+  const resData = await response.json();
+  queryClient.invalidateQueries({ queryKey: ["folders"] });
+  return resData.data || resData;
 }
 
 export async function deleteFolderApi(
@@ -68,20 +111,57 @@ export async function deleteFolderApi(
   if (!response.ok) {
     throw new Error("Failed to delete folder");
   }
-  return response.json();
+  const resData = await response.json();
+  queryClient.invalidateQueries({ queryKey: ["folders"] });
+  return resData;
 }
 
 // --- NOTES API ---
 
-export async function fetchNotesApi(): Promise<Note[]> {
-  const response = await customFetch(`${getApiUrl()}/notes`, {
-    method: "GET",
-    headers: getAuthHeaders(),
+export async function fetchNotesApi(
+  page: number = 1,
+  limit: number = 20,
+  folderId?: string,
+): Promise<PaginatedResponse<Note>> {
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
   });
+  if (
+    folderId !== undefined &&
+    folderId !== null &&
+    folderId !== "" &&
+    folderId !== "all"
+  ) {
+    queryParams.append("folderId", folderId);
+  }
+
+  const response = await customFetch(
+    `${getApiUrl()}/notes?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: getAuthHeaders(),
+    },
+  );
   if (!response.ok) {
     throw new Error("Failed to fetch notes");
   }
-  return response.json();
+  const result = await response.json();
+  if (Array.isArray(result)) {
+    return {
+      success: true,
+      data: result,
+      pagination: {
+        page,
+        limit,
+        totalItems: result.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPrevPage: false,
+      },
+    };
+  }
+  return result;
 }
 
 export async function createNoteApi(

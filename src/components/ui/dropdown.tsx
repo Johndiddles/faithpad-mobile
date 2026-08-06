@@ -3,12 +3,12 @@ import {
   View,
   Pressable,
   TextInput,
-  FlatList,
   Modal,
   SafeAreaView,
   Platform,
   useColorScheme,
 } from "react-native";
+import { FlashList } from "@shopify/flash-list";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
@@ -167,15 +167,14 @@ export function Dropdown({
                   </View>
                 )}
 
-                <FlatList
+                <FlashList<DropdownOption>
                   key={layout === "grid" ? `grid-${numColumns}` : "list-1"}
                   data={filteredOptions}
                   numColumns={layout === "grid" ? numColumns : 1}
                   keyExtractor={(item) => item.value}
-                  columnWrapperStyle={
-                    layout === "grid"
-                      ? { justifyContent: "flex-start", gap: 8, marginBottom: 8 }
-                      : undefined
+                  estimatedItemSize={48}
+                  ItemSeparatorComponent={() =>
+                    layout === "grid" ? null : <View className="h-1.5" />
                   }
                   renderItem={({ item }) => {
                     const isSelected = item.value === value;
@@ -217,7 +216,7 @@ export function Dropdown({
                           setSearchQuery("");
                         }}
                         className={cn(
-                          "flex-row items-center justify-between py-3.5 px-2 rounded-xl mb-1.5",
+                          "flex-row items-center justify-between py-3.5 px-2 rounded-xl",
                           isSelected
                             ? "bg-[#e4b022]/10 dark:bg-[#d4af37]/10"
                             : "active:bg-secondary/40",

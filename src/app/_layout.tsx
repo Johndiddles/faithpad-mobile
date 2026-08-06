@@ -11,14 +11,13 @@ import * as SplashScreen from "expo-splash-screen";
 import { useColorScheme, View, ActivityIndicator } from "react-native";
 import { PortalHost } from "@rn-primitives/portal";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { useAuthStore } from "../store";
+import { queryClient } from "@/lib/queryClient";
 
 import "../global.css";
 
-// Create TanStack Query Client
-const queryClient = new QueryClient();
 
 // Prevent splash screen from auto-hiding before authentication is evaluated
 SplashScreen.preventAutoHideAsync().catch(() => {});

@@ -53,3 +53,18 @@ export interface NoteShare {
   permissionLevel: 'VIEW' | 'EDIT';
   createdAt: string;
 }
+
+export interface PaginationMetaData {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  success: boolean;
+  data: T[];
+  pagination: PaginationMetaData;
+}

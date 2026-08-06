@@ -523,18 +523,10 @@ export default function SingleNoteEditorScreen() {
 
   // const sharedUsers = noteShares.filter((s) => s.noteId === note.id);
 
-  const versionOptions = versionsData
-    ? versionsData.map((v) => ({
-        label: `${v.abbreviation} - ${v.name}`,
-        value: v.abbreviation,
-      }))
-    : [
-        { label: "ESV", value: "ESV" },
-        { label: "NIV", value: "NIV" },
-        { label: "NLT", value: "NLT" },
-        { label: "AMP", value: "AMP" },
-        { label: "KJV", value: "KJV" },
-      ];
+  const versionOptions = (versionsData || []).map((v) => ({
+    label: `${v.abbreviation} - ${v.name}`,
+    value: v.abbreviation,
+  }));
 
   // Book Options
   const bookOptions = BIBLE_METADATA.map((meta) => ({

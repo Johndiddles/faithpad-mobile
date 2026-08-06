@@ -60,12 +60,15 @@ export default function WelcomeScreen() {
           );
         }
 
-        const { token, user, isNewUser } = await res.json();
+        const {
+          data: { token, user, isNewUser },
+        } = await res.json();
 
         if (isNewUser) {
           setPendingNewUser({ user, token });
           // setSelectedTranslation(user.globalDefaultTranslation || "NLT");
         } else {
+          console.log({ user });
           signIn(user, token);
           useNotesStore.getState().syncWithBackend();
         }
