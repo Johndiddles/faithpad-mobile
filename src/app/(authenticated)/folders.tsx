@@ -7,7 +7,6 @@ import {
   Platform,
   TextInput,
   Image,
-  Alert,
   // ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -38,6 +37,26 @@ export default function FoldersScreen() {
   const [folderName, setFolderName] = useState("");
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [validationError, setValidationError] = useState("");
+
+  const [deleteConfirmModalVisible, setDeleteConfirmModalVisible] =
+    useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const handleOpenDeleteModal = (folder: { id: string; name: string }) => {
+    setFolderToDelete(folder);
+    setDeleteConfirmModalVisible(true);
+  };
+
+  const handleConfirmDeleteFolder = () => {
+    if (folderToDelete) {
+      deleteFolder(folderToDelete.id);
+    }
+    setDeleteConfirmModalVisible(false);
+    setFolderToDelete(null);
+  };
 
   const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -263,30 +282,7 @@ export default function FoldersScreen() {
                   />
                 </Pressable>
                 <Pressable
-                  onPress={() => {
-                    if (Platform.OS === "web") {
-                      if (
-                        confirm(
-                          `Are you sure you want to delete ${folder.name}?`,
-                        )
-                      ) {
-                        deleteFolder(folder.id);
-                      }
-                    } else {
-                      Alert.alert(
-                        "Delete Folder",
-                        `Are you sure you want to delete "${folder.name}"? Contained notes will be moved to Uncategorized.`,
-                        [
-                          { text: "Cancel", style: "cancel" },
-                          {
-                            text: "Delete",
-                            style: "destructive",
-                            onPress: () => deleteFolder(folder.id),
-                          },
-                        ],
-                      );
-                    }
-                  }}
+                  onPress={() => handleOpenDeleteModal(folder)}
                   className="p-1 active:opacity-60"
                 >
                   <Ionicons
@@ -387,6 +383,58 @@ export default function FoldersScreen() {
                 variant="gold"
                 onPress={handleSaveFolder}
                 className="flex-1"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Folder Confirmation Modal */}
+      <Modal
+        visible={deleteConfirmModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setDeleteConfirmModalVisible(false);
+          setFolderToDelete(null);
+        }}
+      >
+        <View className="flex-1 bg-black/60 justify-center items-center px-6">
+          <View className="bg-card w-full max-w-sm rounded-3xl p-6 border border-border shadow-2xl items-center">
+            <View className="w-14 h-14 rounded-full bg-red-500/15 dark:bg-red-500/20 justify-center items-center mb-4">
+              <Ionicons name="trash-outline" size={28} color="#ef4444" />
+            </View>
+
+            <AppText
+              weight="bold"
+              className="text-xl text-center text-foreground mb-2"
+            >
+              Delete Folder?
+            </AppText>
+
+            <AppText className="text-sm text-muted-foreground text-center mb-6 leading-relaxed">
+              Are you sure you want to delete{" "}
+              <AppText weight="bold" className="text-foreground">
+                &quot;{folderToDelete?.name || "Untitled Folder"}&quot;
+              </AppText>
+              ? Contained notes will be moved to Uncategorized.
+            </AppText>
+
+            <View className="flex-row gap-x-3 w-full">
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={() => {
+                  setDeleteConfirmModalVisible(false);
+                  setFolderToDelete(null);
+                }}
+                className="flex-1 py-3.5"
+              />
+              <Button
+                title="Delete"
+                variant="destructive"
+                onPress={handleConfirmDeleteFolder}
+                className="flex-1 py-3.5"
               />
             </View>
           </View>
