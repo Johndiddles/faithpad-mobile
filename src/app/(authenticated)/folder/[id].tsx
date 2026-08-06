@@ -110,8 +110,6 @@ export default function FolderNotesListScreen() {
     });
   }, [combinedNotes, folderId, searchQuery]);
 
-  console.log({ filteredNotes: filteredNotes.length });
-
   const handleCreateNewNote = () => {
     const activeFolder =
       folderId === "all" || folderId === "uncategorized" ? null : folderId;
