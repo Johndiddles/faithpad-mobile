@@ -1402,8 +1402,7 @@ export default function SingleNoteEditorScreen() {
                 <Ionicons
                   name="close"
                   size={24}
-                  className="text-foreground"
-                  color="hsl(var(--foreground))"
+                  color={colorScheme === "dark" ? "#e4b022" : "#666666"}
                 />
               </Pressable>
             </View>

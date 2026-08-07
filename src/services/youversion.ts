@@ -55,3 +55,55 @@ export async function fetchBiblePassage(
   const data = await response.json();
   return data;
 }
+
+export interface BibleVerseDetail {
+  id: string;
+  passage_id: string;
+  title: string;
+}
+
+export interface BibleChapterDetail {
+  id: string;
+  passage_id: string;
+  title: string;
+  verses?: BibleVerseDetail[];
+}
+
+export interface BibleBookDetail {
+  id: string;
+  title: string;
+  full_title: string;
+  abbreviation?: string;
+  canon: string;
+  intro?: {
+    id: string;
+    passage_id: string;
+    title: string;
+  };
+  chapters?: BibleChapterDetail[];
+}
+
+export async function fetchBibleBooks(
+  versionId?: number,
+  canon?: string
+): Promise<BibleBookDetail[]> {
+  const params = new URLSearchParams();
+  if (versionId) {
+    params.append("versionId", versionId.toString());
+  }
+  if (canon) {
+    params.append("canon", canon);
+  }
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+  const response = await customFetch(`${API_URL}/bible/books${queryString}`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch bible books");
+  }
+
+  const data = await response.json();
+  return data.data;
+}
+

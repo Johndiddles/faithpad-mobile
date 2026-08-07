@@ -4,15 +4,15 @@ import {
   Pressable,
   TextInput,
   Modal,
-  SafeAreaView,
   Platform,
   useColorScheme,
+  FlatList,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
 import { AppText } from "./app-text";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export interface DropdownOption {
   label: string;
@@ -110,11 +110,11 @@ export function Dropdown({
       >
         <View className="flex-1 bg-black/60 justify-end">
           <KeyboardAvoidingView
-            behavior="padding"
-            className="bg-card rounded-t-3xl border-t border-border max-h-[80%]"
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            className="bg-card rounded-t-3xl border-t border-border h-[500px] max-h-[85%]"
           >
-            <SafeAreaView className="">
-              <View className="py-4 px-5">
+            <SafeAreaView className="flex-1" edges={["bottom"]}>
+              <View className="flex-1 py-4 px-5">
                 <View className="flex-row justify-between items-center mb-4">
                   <AppText weight="bold" className="text-lg">
                     {label || "Select Option"}
@@ -167,18 +167,54 @@ export function Dropdown({
                   </View>
                 )}
 
-                <FlashList<DropdownOption>
-                  key={layout === "grid" ? `grid-${numColumns}` : "list-1"}
-                  data={filteredOptions}
-                  numColumns={layout === "grid" ? numColumns : 1}
-                  keyExtractor={(item) => item.value}
-                  estimatedItemSize={48}
-                  ItemSeparatorComponent={() =>
-                    layout === "grid" ? null : <View className="h-1.5" />
-                  }
-                  renderItem={({ item }) => {
-                    const isSelected = item.value === value;
-                    if (layout === "grid") {
+                <View className="flex-1">
+                  <FlatList<DropdownOption>
+                    key={layout === "grid" ? `grid-${numColumns}` : "list-1"}
+                    data={filteredOptions}
+                    numColumns={layout === "grid" ? numColumns : 1}
+                    keyExtractor={(item) => item.value}
+                    columnWrapperStyle={
+                      layout === "grid" ? { flexDirection: "row" } : undefined
+                    }
+                    ItemSeparatorComponent={() =>
+                      layout === "grid" ? null : <View className="h-1.5" />
+                    }
+                    renderItem={({ item }) => {
+                      const isSelected = item.value === value;
+                      if (layout === "grid") {
+                        return (
+                          <View
+                            style={{ width: `${100 / numColumns}%` }}
+                            className="p-1"
+                          >
+                            <Pressable
+                              onPress={() => {
+                                onSelect(item.value);
+                                setIsOpen(false);
+                                setSearchQuery("");
+                              }}
+                              className={cn(
+                                "h-12 items-center justify-center rounded-xl border",
+                                isSelected
+                                  ? "bg-[#e4b022] dark:bg-[#d4af37] border-[#e4b022] dark:border-[#d4af37]"
+                                  : "bg-secondary/30 border-border/50 active:bg-secondary/70",
+                              )}
+                            >
+                              <AppText
+                                weight={isSelected ? "bold" : "semibold"}
+                                className={cn(
+                                  "text-base text-center",
+                                  isSelected
+                                    ? "text-black dark:text-black"
+                                    : "text-foreground",
+                                )}
+                              >
+                                {item.label}
+                              </AppText>
+                            </Pressable>
+                          </View>
+                        );
+                      }
                       return (
                         <Pressable
                           onPress={() => {
@@ -187,77 +223,46 @@ export function Dropdown({
                             setSearchQuery("");
                           }}
                           className={cn(
-                            "h-12 flex-1 items-center justify-center rounded-xl border",
+                            "flex-row items-center justify-between py-3.5 px-2 rounded-xl",
                             isSelected
-                              ? "bg-[#e4b022] dark:bg-[#d4af37] border-[#e4b022] dark:border-[#d4af37]"
-                              : "bg-secondary/30 border-border/50 active:bg-secondary/70",
+                              ? "bg-[#e4b022]/10 dark:bg-[#d4af37]/10"
+                              : "active:bg-secondary/40",
                           )}
-                          style={{ minWidth: "17%", maxWidth: "18.5%" }}
                         >
                           <AppText
-                            weight={isSelected ? "bold" : "semibold"}
+                            weight={isSelected ? "semibold" : "normal"}
                             className={cn(
-                              "text-base text-center",
+                              "text-base",
                               isSelected
-                                ? "text-black dark:text-black"
+                                ? "text-[#e4b022] dark:text-[#d4af37]"
                                 : "text-foreground",
                             )}
                           >
                             {item.label}
                           </AppText>
+                          {isSelected && (
+                            <Ionicons
+                              name="checkmark"
+                              size={18}
+                              className="text-[#e4b022] dark:text-[#d4af37]"
+                              color={
+                                Platform.OS === "ios" ? "#e4b022" : "#d4af37"
+                              }
+                            />
+                          )}
                         </Pressable>
                       );
-                    }
-                    return (
-                      <Pressable
-                        onPress={() => {
-                          onSelect(item.value);
-                          setIsOpen(false);
-                          setSearchQuery("");
-                        }}
-                        className={cn(
-                          "flex-row items-center justify-between py-3.5 px-2 rounded-xl",
-                          isSelected
-                            ? "bg-[#e4b022]/10 dark:bg-[#d4af37]/10"
-                            : "active:bg-secondary/40",
-                        )}
-                      >
-                        <AppText
-                          weight={isSelected ? "semibold" : "normal"}
-                          className={cn(
-                            "text-base",
-                            isSelected
-                              ? "text-[#e4b022] dark:text-[#d4af37]"
-                              : "text-foreground",
-                          )}
-                        >
-                          {item.label}
+                    }}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                    ListEmptyComponent={
+                      <View className="py-8 items-center justify-center">
+                        <AppText className="text-muted-foreground text-sm">
+                          No results found
                         </AppText>
-                        {isSelected && (
-                          <Ionicons
-                            name="checkmark"
-                            size={18}
-                            className="text-[#e4b022] dark:text-[#d4af37]"
-                            color={
-                              Platform.OS === "ios" ? "#e4b022" : "#d4af37"
-                            }
-                          />
-                        )}
-                      </Pressable>
-                    );
-                  }}
-                  className={cn(
-                    layout === "grid" ? "max-h-[360px]" : "max-h-[300px]",
-                  )}
-                  contentContainerStyle={{ paddingBottom: 20 }}
-                  ListEmptyComponent={
-                    <View className="py-8 items-center justify-center">
-                      <AppText className="text-muted-foreground text-sm">
-                        No results found
-                      </AppText>
-                    </View>
-                  }
-                />
+                      </View>
+                    }
+                  />
+                </View>
               </View>
             </SafeAreaView>
           </KeyboardAvoidingView>
