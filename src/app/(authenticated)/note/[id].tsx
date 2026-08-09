@@ -31,7 +31,7 @@ import {
 import { Dropdown } from "@/components/ui/dropdown";
 import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
-import { BIBLE_METADATA } from "../../../lib/bible-metadata";
+import { useBibleBooks } from "@/queries/useBibleBooks";
 
 function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
   if (oldBlocks.length === 1 && oldBlocks[0].content.startsWith('{"root":')) {
@@ -325,6 +325,10 @@ export default function SingleNoteEditorScreen() {
   // });
 
   const { data: versionsData } = useBibleVersionsQuery();
+  const { data: booksData = [] } = useBibleBooks({
+    versionId: versionsData?.find((v) => v.abbreviation === bibleVersion)?.id!,
+    enabled: !!bibleVersion,
+  });
 
   // Set default bible version based on user preference or first item
   React.useEffect(() => {
@@ -529,14 +533,14 @@ export default function SingleNoteEditorScreen() {
   }));
 
   // Book Options
-  const bookOptions = BIBLE_METADATA.map((meta) => ({
-    label: meta.book,
-    value: meta.book,
+  const bookOptions = (booksData || []).map((book) => ({
+    label: book.title,
+    value: book.full_title,
   }));
 
   // Selected book metadata
-  const selectedBookMeta = BIBLE_METADATA.find((m) => m.book === bibleBook);
-  const chapterCount = selectedBookMeta ? selectedBookMeta.chapters.length : 1;
+  const selectedBookMeta = booksData.find((b) => b.title === bibleBook);
+  const chapterCount = selectedBookMeta?.chapters?.length || 1;
 
   // Chapter options
   const chapterOptions = Array.from({ length: chapterCount }, (_, i) => ({
@@ -547,9 +551,7 @@ export default function SingleNoteEditorScreen() {
   // Verse count
   const currentChapterIdx = parseInt(bibleChapter, 10) - 1;
   const verseCount =
-    selectedBookMeta && selectedBookMeta.chapters[currentChapterIdx]
-      ? selectedBookMeta.chapters[currentChapterIdx]
-      : 1;
+    selectedBookMeta?.chapters?.[currentChapterIdx]?.verses?.length || 1;
 
   // Start Verse options
   const startVerseOptions = Array.from({ length: verseCount }, (_, i) => ({
@@ -1408,6 +1410,28 @@ export default function SingleNoteEditorScreen() {
             </View>
 
             <ScrollView className="space-y-4">
+              <View className="">
+                <Dropdown
+                  label={isInsertingComparison ? "Base Translation" : "Version"}
+                  value={bibleVersion}
+                  options={versionOptions}
+                  onSelect={setBibleVersion}
+                  placeholder="Select Version"
+                />
+              </View>
+              {isInsertingComparison && (
+                <View className="">
+                  <Dropdown
+                    label="Compare With"
+                    value={comparisonVersion}
+                    options={versionOptions.filter(
+                      (opt) => opt.value !== bibleVersion,
+                    )}
+                    onSelect={setComparisonVersion}
+                    placeholder="Select Version to Compare"
+                  />
+                </View>
+              )}
               <Dropdown
                 label="Book"
                 value={bibleBook}
@@ -1450,30 +1474,6 @@ export default function SingleNoteEditorScreen() {
                   />
                 </View>
               </View>
-
-              <View className="mb-4">
-                <Dropdown
-                  label={isInsertingComparison ? "Base Translation" : "Version"}
-                  value={bibleVersion}
-                  options={versionOptions}
-                  onSelect={setBibleVersion}
-                  placeholder="Select Version"
-                />
-              </View>
-
-              {isInsertingComparison && (
-                <View className="mb-6">
-                  <Dropdown
-                    label="Compare With"
-                    value={comparisonVersion}
-                    options={versionOptions.filter(
-                      (opt) => opt.value !== bibleVersion,
-                    )}
-                    onSelect={setComparisonVersion}
-                    placeholder="Select Version to Compare"
-                  />
-                </View>
-              )}
 
               <Button
                 title={

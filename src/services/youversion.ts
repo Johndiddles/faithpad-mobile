@@ -93,27 +93,23 @@ export interface BibleBookDetail {
   chapters?: BibleChapterDetail[];
 }
 
+interface FetchBibleBooksResponse {
+  success: boolean;
+  data: BibleBookDetail[];
+}
 export async function fetchBibleBooks(
-  versionId?: number,
+  versionId: number,
   canon?: string,
 ): Promise<BibleBookDetail[]> {
   try {
-    const params = new URLSearchParams();
-    if (versionId) {
-      params.append("versionId", versionId.toString());
-    }
-    if (canon) {
-      params.append("canon", canon);
-    }
-    const queryString = params.toString() ? `?${params.toString()}` : "";
-    const response = await customFetch<BibleBookDetail[]>(
-      `/bible/books${queryString}`,
+    const response = await customFetch<FetchBibleBooksResponse>(
+      `/bible/books/${versionId}`,
       {
         method: "GET",
       },
     );
 
-    return response;
+    return response.data;
   } catch (error: any) {
     console.error("Error fetching bible books:", error);
     throw new Error(error.message || "Failed to fetch bible books");
