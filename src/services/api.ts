@@ -1,87 +1,112 @@
-import { useAuthStore } from "../store";
-import { Folder, Note, EditorBlock } from "../lib/types";
-import { API_URL } from "@/constants/env";
+import { Folder, Note, EditorBlock, PaginatedResponse } from "../lib/types";
 import { customFetch } from "./customFetch";
-
-const getApiUrl = () => {
-  return API_URL;
-};
-
-const getAuthHeaders = () => {
-  const token = useAuthStore.getState().token;
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token || ""}`,
-  };
-};
+import { queryClient } from "@/lib/queryClient";
 
 // --- FOLDERS API ---
 
-export async function fetchFoldersApi(): Promise<Folder[]> {
-  const response = await customFetch(`${getApiUrl()}/folders`, {
-    method: "GET",
-    headers: getAuthHeaders(),
+export async function fetchFoldersApi(
+  page: number = 1,
+  limit: number = 20,
+): Promise<PaginatedResponse<Folder>> {
+  const queryParams = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
   });
-  if (!response.ok) {
-    throw new Error("Failed to fetch folders");
+  try {
+    const response = await customFetch<PaginatedResponse<Folder>>(
+      `/folders?${queryParams.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+    return response;
+  } catch (error: any) {
+    console.error("Error fetching folders:", error);
+    throw new Error(error.message || "Failed to fetch folders");
   }
-  return response.json();
 }
 
 export async function createFolderApi(
   name: string,
   id?: string,
 ): Promise<Folder> {
-  const response = await customFetch(`${getApiUrl()}/folders`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ id, name }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create folder");
+  try {
+    const response = await customFetch<Folder>(`/folders`, {
+      method: "POST",
+      data: { id, name },
+    });
+    queryClient.invalidateQueries({ queryKey: ["folders"] });
+    return response;
+  } catch (error: any) {
+    console.error("Error creating folder:", error);
+    throw new Error(error.message || "Failed to create folder");
   }
-  return response.json();
 }
 
 export async function renameFolderApi(
   id: string,
   name: string,
 ): Promise<Folder> {
-  const response = await customFetch(`${getApiUrl()}/folders/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ name }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to rename folder");
+  try {
+    const response = await customFetch<Folder>(`/folders/${id}`, {
+      method: "PUT",
+      data: { name },
+    });
+    queryClient.invalidateQueries({ queryKey: ["folders"] });
+    return response;
+  } catch (error: any) {
+    console.error("Error renaming folder:", error);
+    throw new Error(error.message || "Failed to rename folder");
   }
-  return response.json();
 }
 
 export async function deleteFolderApi(
   id: string,
 ): Promise<{ success: boolean }> {
-  const response = await customFetch(`${getApiUrl()}/folders/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete folder");
+  try {
+    const response = await customFetch<{ success: boolean }>(`/folders/${id}`, {
+      method: "DELETE",
+    });
+    queryClient.invalidateQueries({ queryKey: ["folders"] });
+    return response;
+  } catch (error: any) {
+    console.error("Error deleting folder:", error);
+    throw new Error(error.message || "Failed to delete folder");
   }
-  return response.json();
 }
 
 // --- NOTES API ---
 
-export async function fetchNotesApi(): Promise<Note[]> {
-  const response = await customFetch(`${getApiUrl()}/notes`, {
-    method: "GET",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to fetch notes");
+export async function fetchNotesApi(
+  page: number = 1,
+  limit: number = 20,
+  folderId?: string,
+): Promise<PaginatedResponse<Note>> {
+  try {
+    const queryParams = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (
+      folderId !== undefined &&
+      folderId !== null &&
+      folderId !== "" &&
+      folderId !== "all"
+    ) {
+      queryParams.append("folderId", folderId);
+    }
+
+    const response = await customFetch<PaginatedResponse<Note>>(
+      `/notes?${queryParams.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+    return response;
+  } catch (error: any) {
+    console.error("Error fetching notes:", error);
+    throw new Error(error.message || "Failed to fetch notes");
   }
-  return response.json();
 }
 
 export async function createNoteApi(
@@ -90,15 +115,16 @@ export async function createNoteApi(
   id?: string,
   blocks?: EditorBlock[],
 ): Promise<Note> {
-  const response = await customFetch(`${getApiUrl()}/notes`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ id, folderId, title, blocks }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to create note");
+  try {
+    const response = await customFetch<Note>(`/notes`, {
+      method: "POST",
+      data: { id, folderId, title, blocks },
+    });
+    return response;
+  } catch (error: any) {
+    console.error("Error creating note:", error);
+    throw new Error(error.message || "Failed to create note");
   }
-  return response.json();
 }
 
 export async function updateNoteApi(
@@ -110,26 +136,28 @@ export async function updateNoteApi(
     version?: number;
   },
 ): Promise<Note> {
-  const response = await customFetch(`${getApiUrl()}/notes/${id}`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify(updates),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update note");
+  try {
+    const response = await customFetch<Note>(`/notes/${id}`, {
+      method: "PUT",
+      data: updates,
+    });
+    return response;
+  } catch (error: any) {
+    console.error("Error updating note:", error);
+    throw new Error(error.message || "Failed to update note");
   }
-  return response.json();
 }
 
 export async function deleteNoteApi(id: string): Promise<{ success: boolean }> {
-  const response = await customFetch(`${getApiUrl()}/notes/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to delete note");
+  try {
+    const response = await customFetch<{ success: boolean }>(`/notes/${id}`, {
+      method: "DELETE",
+    });
+    return response;
+  } catch (error: any) {
+    console.error("Error deleting note:", error);
+    throw new Error(error.message || "Failed to delete note");
   }
-  return response.json();
 }
 
 // --- USER SETTINGS API ---
@@ -138,13 +166,14 @@ export async function updateUserSettingsApi(
   globalDefaultTranslation: string,
   aiDetectionEnabled: boolean,
 ): Promise<any> {
-  const response = await customFetch(`${getApiUrl()}/users/settings`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ globalDefaultTranslation, aiDetectionEnabled }),
-  });
-  if (!response.ok) {
-    throw new Error("Failed to update user settings");
+  try {
+    const response = await customFetch(`/users/settings`, {
+      method: "PUT",
+      data: { globalDefaultTranslation, aiDetectionEnabled },
+    });
+    return response;
+  } catch (error: any) {
+    console.error("Error updating user settings:", error);
+    throw new Error(error.message || "Failed to update user settings");
   }
-  return response.json();
 }

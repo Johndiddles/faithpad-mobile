@@ -35,6 +35,7 @@ interface AuthState {
 interface NoteState {
   folders: Folder[];
   notes: Note[];
+  deletedNoteIds: string[];
   noteShares: NoteShare[];
 
   // Backend Sync
@@ -136,20 +137,28 @@ export const useNotesStore = create<NoteState>()(
     (set, get) => ({
       folders: [],
       notes: [],
+      deletedNoteIds: [],
       noteShares: [],
 
       syncWithBackend: async () => {
         try {
-          const [remoteFolders, remoteNotes] = await Promise.all([
-            fetchFoldersApi().catch(() => null),
-            fetchNotesApi().catch(() => null),
+          const [remoteFoldersRes, remoteNotesRes] = await Promise.all([
+            fetchFoldersApi(1, 1000).catch(() => null),
+            fetchNotesApi(1, 1000).catch(() => null),
           ]);
 
-          if (remoteFolders !== null) {
-            set({ folders: remoteFolders });
+          if (remoteFoldersRes !== null) {
+            const foldersData = remoteFoldersRes?.data || [];
+
+            set({ folders: foldersData });
           }
-          if (remoteNotes !== null) {
-            set({ notes: remoteNotes });
+          if (remoteNotesRes !== null) {
+            const notesData = Array.isArray(remoteNotesRes)
+              ? remoteNotesRes
+              : Array.isArray((remoteNotesRes as any)?.data)
+                ? (remoteNotesRes as any).data
+                : [];
+            set({ notes: notesData });
           }
         } catch (err) {
           console.error("Error syncing with backend:", err);
@@ -264,6 +273,7 @@ export const useNotesStore = create<NoteState>()(
       deleteNote: (id) => {
         set((state) => ({
           notes: state.notes.filter((n) => n.id !== id),
+          deletedNoteIds: [...state.deletedNoteIds, id],
           noteShares: state.noteShares.filter((s) => s.noteId !== id),
         }));
         deleteNoteApi(id).catch((err) =>
@@ -306,6 +316,7 @@ export const useNotesStore = create<NoteState>()(
         set({
           folders: [],
           notes: [],
+          deletedNoteIds: [],
           noteShares: [],
         });
       },

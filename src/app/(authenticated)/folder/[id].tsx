@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Pressable,
@@ -6,14 +6,17 @@ import {
   TextInput,
   Platform,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { FlashList } from "@shopify/flash-list";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { useNotesStore } from "../../../store";
 import { Note } from "../../../lib/types";
+import { useNotesQuery } from "@/queries/useNotes";
 import {
   formatNoteDate,
   getNoteSnippet,
@@ -25,7 +28,8 @@ export default function FolderNotesListScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const folderId = params.id;
 
-  const { folders, notes, deleteNote, createNote, moveNote } = useNotesStore();
+  const { folders, notes, deletedNoteIds, deleteNote, createNote, moveNote } =
+    useNotesStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -42,31 +46,69 @@ export default function FolderNotesListScreen() {
         ? "Uncategorized"
         : folder?.name || "Notes";
 
-  const filteredNotes = notes.filter((note) => {
-    if (folderId === "uncategorized") {
-      if (note.folderId !== null) return false;
-    } else if (folderId !== "all") {
-      if (note.folderId !== folderId) return false;
-    }
+  const targetFolderId =
+    folderId === "all" || folderId === "uncategorized"
+      ? undefined
+      : (folderId as string);
 
-    if (searchQuery.trim() !== "") {
-      const query = searchQuery.toLowerCase();
-      const titleMatches = note.title?.toLowerCase().includes(query) || false;
-      const contentMatches = note.blocks.some((b) => {
-        const content = b.content.startsWith('{"root":')
-          ? getPlainTextFromLexical(b.content)
-          : b.content;
-        return (
-          content.toLowerCase().includes(query) ||
-          b.items?.some((i) => i.toLowerCase().includes(query)) ||
-          false
-        );
-      });
-      return titleMatches || contentMatches;
-    }
+  const {
+    data: notesData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isRefetching,
+    refetch,
+  } = useNotesQuery(targetFolderId);
 
-    return true;
-  });
+  const fetchedNotes = useMemo(() => {
+    if (!notesData?.pages) return [];
+    return notesData.pages.flatMap((page) => page.data || []);
+  }, [notesData]);
+
+  const combinedNotes = useMemo(() => {
+    const deletedSet = new Set(deletedNoteIds);
+    const storeMap = new Map(notes.map((n) => [n.id, n]));
+
+    const updatedFetchedNotes = fetchedNotes
+      .filter((fn) => !deletedSet.has(fn.id))
+      .map((fn) => storeMap.get(fn.id) || fn);
+
+    const fetchedIdSet = new Set(fetchedNotes.map((fn) => fn.id));
+    const storeOnlyNotes = notes.filter(
+      (sn) => !fetchedIdSet.has(sn.id) && !deletedSet.has(sn.id),
+    );
+
+    return [...storeOnlyNotes, ...updatedFetchedNotes];
+  }, [fetchedNotes, notes, deletedNoteIds]);
+
+  const filteredNotes = useMemo(() => {
+    return combinedNotes.filter((note) => {
+      if (folderId === "uncategorized") {
+        if (note.folderId !== null) return false;
+      } else if (folderId !== "all") {
+        if (note.folderId !== folderId) return false;
+      }
+
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        const titleMatches = note.title?.toLowerCase().includes(query) || false;
+        const contentMatches = note.blocks.some((b) => {
+          const content = b.content.startsWith('{"root":')
+            ? getPlainTextFromLexical(b.content)
+            : b.content;
+          return (
+            content.toLowerCase().includes(query) ||
+            b.items?.some((i) => i.toLowerCase().includes(query)) ||
+            false
+          );
+        });
+        return titleMatches || contentMatches;
+      }
+
+      return true;
+    });
+  }, [combinedNotes, folderId, searchQuery]);
 
   const handleCreateNewNote = () => {
     const activeFolder =
@@ -165,26 +207,28 @@ export default function FolderNotesListScreen() {
       </View>
 
       {/* Notes List */}
-      <ScrollView className="flex-1 px-6">
-        {filteredNotes.length === 0 ? (
-          <View className="items-center justify-center mt-20">
-            <Ionicons
-              name="document-text-outline"
-              size={64}
-              className="text-muted-foreground/30"
-              color="rgba(128,128,128,0.2)"
-            />
-            <AppText
-              weight="medium"
-              className="text-base text-muted-foreground mt-4"
-            >
-              No notes found
-            </AppText>
+      <View className="flex-1 px-6 pt-2">
+        {isLoading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="hsl(var(--primary))" />
           </View>
         ) : (
-          <View className="mt-4 bg-secondary/15 dark:bg-secondary/5 border border-border/80 rounded-2xl overflow-hidden mb-6">
-            {filteredNotes.map((note, idx) => (
-              <View key={note.id} className="border-b border-border/60">
+          <FlashList<Note>
+            data={filteredNotes}
+            keyExtractor={(item) => item.id}
+            estimatedItemSize={72}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.3}
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            ItemSeparatorComponent={() => <View className="h-2" />}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            renderItem={({ item: note }) => (
+              <View className="border-b border-border/60 bg-secondary/15 dark:bg-secondary/5 rounded-xl overflow-hidden border border-border/40">
                 <Pressable
                   onPress={() => router.push(`/note/${note.id}` as any)}
                   className="flex-row items-center justify-between px-4 py-4 active:bg-secondary/30"
@@ -223,10 +267,39 @@ export default function FolderNotesListScreen() {
                   </Pressable>
                 </Pressable>
               </View>
-            ))}
-          </View>
+            )}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View className="py-4 items-center">
+                  <ActivityIndicator
+                    size="small"
+                    color={Platform.OS === "ios" ? "#e4b022" : "#d4af37"}
+                  />
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              !isLoading ? (
+                <View className="flex-1 items-center justify-center mt-20">
+                  <Ionicons
+                    name="document-text-outline"
+                    size={64}
+                    className="text-muted-foreground/30"
+                    color="rgba(128,128,128,0.2)"
+                  />
+                  <AppText
+                    weight="medium"
+                    className="text-base text-muted-foreground mt-4"
+                  >
+                    No notes found
+                  </AppText>
+                </View>
+              ) : null
+            }
+            extraData={filteredNotes}
+          />
         )}
-      </ScrollView>
+      </View>
 
       {/* iOS styled Bottom Toolbar */}
       <View

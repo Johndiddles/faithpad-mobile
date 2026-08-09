@@ -8,7 +8,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Platform, View } from "react-native";
 import { useAuthStore, useNotesStore } from "../../store";
-import { API_URL, GOOGLE_CLIENT_ID } from "@/constants/env";
+import { GOOGLE_CLIENT_ID } from "@/constants/env";
 import { updateUserSettingsApi } from "@/services/api";
 import { customFetch } from "@/services/customFetch";
 import DefaultTranslationModal from "@/components/welcome/DefaultTranslationModal";
@@ -17,6 +17,12 @@ WebBrowser.maybeCompleteAuthSession();
 const redirectUri = makeRedirectUri({
   scheme: "com.johndiddles.faithpad",
 });
+
+interface AuthGoogleResponse {
+  isNewUser: boolean;
+  user: any;
+  token: string;
+}
 
 export default function WelcomeScreen() {
   const { signIn } = useAuthStore();
@@ -44,29 +50,18 @@ export default function WelcomeScreen() {
     async (idToken: string) => {
       setGoogleLoading(true);
       try {
-        const apiUrl = API_URL;
-        const res = await customFetch(`${apiUrl}/auth/google`, {
+        const res = await customFetch<AuthGoogleResponse>(`/auth/google`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ idToken }),
+          data: { idToken },
         });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(
-            errData.message || "Failed to authenticate with backend server",
-          );
-        }
+        const data = res.data as AuthGoogleResponse;
 
-        const { token, user, isNewUser } = await res.json();
-
-        if (isNewUser) {
-          setPendingNewUser({ user, token });
-          // setSelectedTranslation(user.globalDefaultTranslation || "NLT");
+        if (data?.isNewUser) {
+          setPendingNewUser({ user: data.user, token: data.token });
         } else {
-          signIn(user, token);
+          console.log({ user: data?.user });
+          signIn(data?.user, data?.token);
           useNotesStore.getState().syncWithBackend();
         }
       } catch (error: any) {
