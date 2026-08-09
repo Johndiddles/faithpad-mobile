@@ -1,4 +1,3 @@
-import { API_URL } from "@/constants/env";
 import { customFetch } from "./customFetch";
 
 export interface BibleVersionDetail {
@@ -7,24 +6,38 @@ export interface BibleVersionDetail {
   name: string;
 }
 
-export async function fetchBibleVersions(): Promise<BibleVersionDetail[]> {
-  const response = await customFetch(`${API_URL}/bible/versions`, {
-    method: "GET",
-  });
+export interface BibleVersionsResponse {
+  success: boolean;
+  data: BibleVersionDetail[];
+}
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch bible versions");
+export async function fetchBibleVersions(): Promise<
+  BibleVersionsResponse["data"]
+> {
+  try {
+    const response = await customFetch<BibleVersionsResponse>(
+      `/bible/versions`,
+      {
+        method: "GET",
+      },
+    );
+
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching bible versions:", error);
+    throw new Error(error.message || "Failed to fetch bible versions");
   }
-
-  const data = await response.json();
-  console.log(JSON.stringify({ data }, null, 2));
-  return data.data;
 }
 
 export interface FetchPassageResult {
   reference: string;
   text: string;
   translation: string;
+}
+
+export interface FetchPassageResponse {
+  success: boolean;
+  data: FetchPassageResult;
 }
 
 export async function fetchBiblePassage(
@@ -34,26 +47,23 @@ export async function fetchBiblePassage(
   verseStart: number,
   verseEnd?: number,
 ): Promise<FetchPassageResult> {
-  const response = await customFetch(`${API_URL}/bible/passage`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      translation,
-      bookUSFM,
-      chapter,
-      verseStart,
-      verseEnd,
-    }),
-  });
+  try {
+    const response = await customFetch<FetchPassageResponse>(`/bible/passage`, {
+      method: "POST",
+      data: {
+        translation,
+        bookUSFM,
+        chapter,
+        verseStart,
+        verseEnd,
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch Bible passage");
+    return response.data;
+  } catch (error: any) {
+    console.error("Error fetching bible passage:", error);
+    throw new Error(error.message || "Failed to fetch bible passage");
   }
-
-  const data = await response.json();
-  return data;
 }
 
 export interface BibleVerseDetail {
@@ -85,25 +95,27 @@ export interface BibleBookDetail {
 
 export async function fetchBibleBooks(
   versionId?: number,
-  canon?: string
+  canon?: string,
 ): Promise<BibleBookDetail[]> {
-  const params = new URLSearchParams();
-  if (versionId) {
-    params.append("versionId", versionId.toString());
-  }
-  if (canon) {
-    params.append("canon", canon);
-  }
-  const queryString = params.toString() ? `?${params.toString()}` : "";
-  const response = await customFetch(`${API_URL}/bible/books${queryString}`, {
-    method: "GET",
-  });
+  try {
+    const params = new URLSearchParams();
+    if (versionId) {
+      params.append("versionId", versionId.toString());
+    }
+    if (canon) {
+      params.append("canon", canon);
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    const response = await customFetch<BibleBookDetail[]>(
+      `/bible/books${queryString}`,
+      {
+        method: "GET",
+      },
+    );
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch bible books");
+    return response;
+  } catch (error: any) {
+    console.error("Error fetching bible books:", error);
+    throw new Error(error.message || "Failed to fetch bible books");
   }
-
-  const data = await response.json();
-  return data.data;
 }
-
