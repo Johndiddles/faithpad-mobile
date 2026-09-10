@@ -232,7 +232,7 @@ export default function WelcomeScreen() {
 
               <Input
                 label="Username"
-                placeholder="e.g. demo"
+                placeholder="username"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -246,7 +246,7 @@ export default function WelcomeScreen() {
 
               <Input
                 label="Password"
-                placeholder="e.g. Password@12"
+                placeholder="********"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
