@@ -216,7 +216,6 @@ export default function FolderNotesListScreen() {
           <FlashList<Note>
             data={filteredNotes}
             keyExtractor={(item) => item.id}
-            estimatedItemSize={72}
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
                 fetchNextPage();

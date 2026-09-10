@@ -1,19 +1,40 @@
-import React, { forwardRef, useState } from 'react';
-import { TextInput, View, Pressable, TextInputProps } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { cn } from '@/lib/utils';
-import { AppText } from './app-text';
+import React, { forwardRef, useState } from "react";
+import {
+  TextInput,
+  View,
+  Pressable,
+  TextInputProps,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { cn } from "@/lib/utils";
+import { AppText } from "./app-text";
 
 export interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   className?: string;
   containerClassName?: string;
+  labelClassName?: string;
+  inputClassName?: string;
   secureTextEntry?: boolean;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(
-  ({ label, error, className, containerClassName, secureTextEntry, ...props }, ref) => {
+  (
+    {
+      label,
+      error,
+      className,
+      containerClassName,
+      labelClassName,
+      inputClassName,
+      secureTextEntry,
+      placeholderTextColor = "hsl(var(--muted-foreground))",
+      ...props
+    },
+    ref,
+  ) => {
     const [isFocused, setIsFocused] = useState(false);
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
@@ -24,18 +45,21 @@ export const Input = forwardRef<TextInput, InputProps>(
         {label && (
           <AppText
             weight="medium"
-            className="text-sm text-foreground/80 mb-1.5"
+            className={cn("text-sm text-foreground/80 mb-1.5", labelClassName)}
           >
             {label}
           </AppText>
         )}
-        
+
         <View
           className={cn(
-            "flex-row items-center border rounded-xl px-3.5 py-3.5 bg-card",
-            isFocused ? "border-[#e4b022] dark:border-[#d4af37]" : "border-border",
+            "flex-row items-center border rounded-xl px-3.5 bg-card",
+            Platform.OS === "ios" ? "pt-2.5 pb-4" : "py-3.5",
+            isFocused
+              ? "border-[#e4b022] dark:border-[#d4af37]"
+              : "border-border",
             error ? "border-destructive" : "",
-            className
+            className,
           )}
         >
           <TextInput
@@ -43,14 +67,17 @@ export const Input = forwardRef<TextInput, InputProps>(
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             secureTextEntry={isSecure}
-            placeholderTextColor="hsl(var(--muted-foreground))"
-            className="flex-1 text-base text-foreground font-sans p-0 m-0"
+            placeholderTextColor={placeholderTextColor}
+            className={cn(
+              "flex-1 text-base text-foreground p-0 m-0",
+              inputClassName,
+            )}
             style={{
-              textAlignVertical: props.multiline ? 'top' : 'center',
+              textAlignVertical: props.multiline ? "top" : "center",
             }}
             {...props}
           />
-          
+
           {secureTextEntry && (
             <Pressable
               onPress={() => setIsPasswordVisible(!isPasswordVisible)}
@@ -64,7 +91,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             </Pressable>
           )}
         </View>
-        
+
         {error && (
           <AppText
             variant="sans"
@@ -75,7 +102,7 @@ export const Input = forwardRef<TextInput, InputProps>(
         )}
       </View>
     );
-  }
+  },
 );
 
-Input.displayName = 'Input';
+Input.displayName = "Input";
