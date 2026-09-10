@@ -71,10 +71,12 @@ export const Input = forwardRef<TextInput, InputProps>(
             className={cn(
               "flex-1 text-base text-foreground p-0 m-0",
               inputClassName,
-              Platform.OS === "ios" && secureTextEntry ? "-mt-1 mb-1" : "",
+              // Platform.OS === "ios" && secureTextEntry ? "-mt-1 mb-1" : "",
             )}
             style={{
               textAlignVertical: props.multiline ? "top" : "center",
+              marginTop: Platform.OS === "ios" && secureTextEntry ? 0 : -4,
+              marginBottom: Platform.OS === "ios" && secureTextEntry ? 0 : 4,
             }}
             {...props}
           />
