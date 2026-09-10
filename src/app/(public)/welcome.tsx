@@ -13,10 +13,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { useAuthStore, useNotesStore } from "../../store";
-import { GOOGLE_CLIENT_ID } from "@/constants/env";
+import { GOOGLE_CLIENT_ID, PRIVACY_POLICY_URL } from "@/constants/env";
 import { updateUserSettingsApi } from "@/services/api";
 import { customFetch } from "@/services/customFetch";
 import DefaultTranslationModal from "@/components/welcome/DefaultTranslationModal";
@@ -183,6 +184,18 @@ export default function WelcomeScreen() {
     }
   }, [response, handleBackendSignIn]);
 
+  const handleOpenPrivacyPolicy = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(PRIVACY_POLICY_URL, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        toolbarColor: "#0f0e0c",
+        controlsColor: "#e4b022",
+      });
+    } catch (error) {
+      console.error("Failed to open privacy policy:", error);
+    }
+  };
+
   return (
     <View className="flex-1 bg-black">
       <StatusBar style="light" />
@@ -308,6 +321,17 @@ export default function WelcomeScreen() {
                 >
                   Psalm 119:105
                 </AppText>
+
+                <TouchableOpacity
+                  onPress={handleOpenPrivacyPolicy}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}
+                  className="mt-3"
+                >
+                  <AppText className="text-xs text-gray-400 underline">
+                    Privacy Policy
+                  </AppText>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
