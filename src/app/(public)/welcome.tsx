@@ -76,7 +76,6 @@ export default function WelcomeScreen() {
         if (data?.isNewUser) {
           setPendingNewUser({ user: data.user, token: data.token });
         } else if (data?.user && data?.token) {
-          console.log({ user: data.user });
           signIn(data.user, data.token);
           useNotesStore.getState().syncWithBackend();
         }
