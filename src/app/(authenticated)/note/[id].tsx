@@ -30,7 +30,7 @@ import {
   ActiveFormats,
 } from "@/components/editor/FaithPadEditor";
 import { Dropdown } from "@/components/ui/dropdown";
-import { BOOK_NAME_TO_USFM, EMPTY_LEXICAL_STATE } from "@/constants/bible";
+import { BOOK_NAME_TO_USFM, USFM_TO_BOOK_NAME, EMPTY_LEXICAL_STATE } from "@/constants/bible";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
 import { useBibleBooks } from "@/queries/useBibleBooks";
 
@@ -259,6 +259,7 @@ export default function SingleNoteEditorScreen() {
   const [bibleVersion, setBibleVersion] = useState<string>("");
   const [comparisonVersion, setComparisonVersion] = useState<string>("");
   const [isInsertingComparison, setIsInsertingComparison] = useState(false);
+  const [editingNodeKey, setEditingNodeKey] = useState<string | null>(null);
 
   // Theme & Lexical Editor State Refs
   const colorScheme = useColorScheme();
@@ -440,7 +441,7 @@ export default function SingleNoteEditorScreen() {
     scheduleDebouncedSync(updated, noteTitle);
   };
 
-  // Manual Scripture Insertion
+  // Manual Scripture Insertion & Modification
   const handleInsertManualScripture = async () => {
     const startV = parseInt(bibleVerse, 10);
     const endV = parseInt(bibleVerseEnd, 10);
@@ -465,37 +466,64 @@ export default function SingleNoteEditorScreen() {
     const executeFetch = async () => {
       try {
         if (isInsertingComparison) {
-          // Comparison block inserts a responsive comparison block containing two translations
+          // Comparison block inserts or updates a responsive comparison block containing two translations
           const [result1, result2] = await Promise.all([
             fetchSingle(chosenTranslation),
             fetchSingle(comparisonVersion),
           ]);
 
-          editorRef.current?.insertComparison({
-            bookUSFM: usfm,
-            chapter: chap,
-            verseStart: startV,
-            verseEnd: endV,
-            comparisons: [
-              { translation: chosenTranslation, text: result1.text },
-              { translation: comparisonVersion, text: result2.text },
-            ],
-          });
+          if (editingNodeKey) {
+            editorRef.current?.updateComparison({
+              nodeKey: editingNodeKey,
+              bookUSFM: usfm,
+              chapter: chap,
+              verseStart: startV,
+              verseEnd: endV,
+              comparisons: [
+                { translation: chosenTranslation, text: result1.text },
+                { translation: comparisonVersion, text: result2.text },
+              ],
+            });
+          } else {
+            editorRef.current?.insertComparison({
+              bookUSFM: usfm,
+              chapter: chap,
+              verseStart: startV,
+              verseEnd: endV,
+              comparisons: [
+                { translation: chosenTranslation, text: result1.text },
+                { translation: comparisonVersion, text: result2.text },
+              ],
+            });
+          }
         } else {
           // Collapsible card block
           const result = await fetchSingle(chosenTranslation);
 
-          editorRef.current?.insertScripture({
-            bookUSFM: usfm,
-            chapter: chap,
-            verseStart: startV,
-            verseEnd: endV,
-            translation: chosenTranslation,
-            verseText: result.text,
-          });
+          if (editingNodeKey) {
+            editorRef.current?.updateScripture({
+              nodeKey: editingNodeKey,
+              bookUSFM: usfm,
+              chapter: chap,
+              verseStart: startV,
+              verseEnd: endV,
+              translation: chosenTranslation,
+              verseText: result.text,
+            });
+          } else {
+            editorRef.current?.insertScripture({
+              bookUSFM: usfm,
+              chapter: chap,
+              verseStart: startV,
+              verseEnd: endV,
+              translation: chosenTranslation,
+              verseText: result.text,
+            });
+          }
         }
+        setEditingNodeKey(null);
       } catch (err: any) {
-        console.error("Failed to insert scripture manually:", err);
+        console.error("Failed to insert/modify scripture:", err);
         Alert.alert(
           "Scripture Fetch Failed",
           `Could not fetch the bible passage from YouVersion REST API. ${err?.message || ""}`,
@@ -513,6 +541,57 @@ export default function SingleNoteEditorScreen() {
     };
 
     await executeFetch();
+  };
+
+  const handleEditScripture = (scripture: {
+    nodeKey: string;
+    bookUSFM: string;
+    chapter: number;
+    verseStart: number;
+    verseEnd: number;
+    translation: any;
+    verseText?: string;
+  }) => {
+    if (!canEdit) return;
+    const bookName =
+      USFM_TO_BOOK_NAME[scripture.bookUSFM.toUpperCase()] || scripture.bookUSFM;
+    setBibleBook(bookName);
+    setBibleChapter(String(scripture.chapter));
+    setBibleVerse(String(scripture.verseStart));
+    setBibleVerseEnd(String(scripture.verseEnd || scripture.verseStart));
+    if (scripture.translation) {
+      setBibleVersion(String(scripture.translation));
+    }
+    setIsInsertingComparison(false);
+    setEditingNodeKey(scripture.nodeKey);
+    setManualBibleModalVisible(true);
+  };
+
+  const handleEditComparison = (comparison: {
+    nodeKey: string;
+    bookUSFM: string;
+    chapter: number;
+    verseStart: number;
+    verseEnd: number;
+    comparisons: { translation: string; text: string }[];
+  }) => {
+    if (!canEdit) return;
+    const bookName =
+      USFM_TO_BOOK_NAME[comparison.bookUSFM.toUpperCase()] ||
+      comparison.bookUSFM;
+    setBibleBook(bookName);
+    setBibleChapter(String(comparison.chapter));
+    setBibleVerse(String(comparison.verseStart));
+    setBibleVerseEnd(String(comparison.verseEnd || comparison.verseStart));
+    if (comparison.comparisons && comparison.comparisons.length > 0) {
+      setBibleVersion(comparison.comparisons[0].translation);
+    }
+    if (comparison.comparisons && comparison.comparisons.length > 1) {
+      setComparisonVersion(comparison.comparisons[1].translation);
+    }
+    setIsInsertingComparison(true);
+    setEditingNodeKey(comparison.nodeKey);
+    setManualBibleModalVisible(true);
   };
 
   // Share handlers
@@ -536,11 +615,13 @@ export default function SingleNoteEditorScreen() {
   // Book Options
   const bookOptions = (booksData || []).map((book) => ({
     label: book.title,
-    value: book.full_title,
+    value: book.title,
   }));
 
   // Selected book metadata
-  const selectedBookMeta = booksData.find((b) => b.title === bibleBook);
+  const selectedBookMeta = booksData.find(
+    (b) => b.title === bibleBook || b.full_title === bibleBook,
+  );
   const chapterCount = selectedBookMeta?.chapters?.length || 1;
 
   // Chapter options
@@ -678,6 +759,8 @@ export default function SingleNoteEditorScreen() {
               initialContent={initialEditorContent}
               onChange={handleEditorChange}
               onFormatChange={setActiveFormats}
+              onEditScripture={handleEditScripture}
+              onEditComparison={handleEditComparison}
               theme={theme}
             />
           </View>
@@ -970,6 +1053,7 @@ export default function SingleNoteEditorScreen() {
               {/* Option 1: Scripture */}
               <Pressable
                 onPress={() => {
+                  setEditingNodeKey(null);
                   setInsertModalVisible(false);
                   setIsInsertingComparison(false);
                   setTimeout(() => {
@@ -1007,6 +1091,7 @@ export default function SingleNoteEditorScreen() {
               {/* Option 2: Comparison */}
               <Pressable
                 onPress={() => {
+                  setEditingNodeKey(null);
                   setInsertModalVisible(false);
                   setIsInsertingComparison(true);
                   setTimeout(() => {
@@ -1388,7 +1473,10 @@ export default function SingleNoteEditorScreen() {
         visible={manualBibleModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setManualBibleModalVisible(false)}
+        onRequestClose={() => {
+          setManualBibleModalVisible(false);
+          setEditingNodeKey(null);
+        }}
       >
         <RNKeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -1397,17 +1485,27 @@ export default function SingleNoteEditorScreen() {
           <View className="flex-1 bg-black/60 justify-end">
             <Pressable
               className="flex-1"
-              onPress={() => setManualBibleModalVisible(false)}
+              onPress={() => {
+                setManualBibleModalVisible(false);
+                setEditingNodeKey(null);
+              }}
             />
             <View className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%]">
               <View className="flex-row justify-between items-center mb-6">
                 <AppText weight="bold" className="text-xl">
-                  {isInsertingComparison
-                    ? "Insert Translation Comparison"
-                    : "Insert Bible Card"}
+                  {editingNodeKey
+                    ? isInsertingComparison
+                      ? "Edit Translation Comparison"
+                      : "Edit Bible Card"
+                    : isInsertingComparison
+                      ? "Insert Translation Comparison"
+                      : "Insert Bible Card"}
                 </AppText>
                 <Pressable
-                  onPress={() => setManualBibleModalVisible(false)}
+                  onPress={() => {
+                    setManualBibleModalVisible(false);
+                    setEditingNodeKey(null);
+                  }}
                   className="p-1.5"
                 >
                   <Ionicons
@@ -1496,9 +1594,13 @@ export default function SingleNoteEditorScreen() {
 
                 <Button
                   title={
-                    isInsertingComparison
-                      ? "Insert Side-by-Side Comparison"
-                      : "Insert Scripture Card"
+                    editingNodeKey
+                      ? isInsertingComparison
+                        ? "Update Side-by-Side Comparison"
+                        : "Update Scripture Card"
+                      : isInsertingComparison
+                        ? "Insert Side-by-Side Comparison"
+                        : "Insert Scripture Card"
                   }
                   variant="gold"
                   onPress={handleInsertManualScripture}

@@ -9,6 +9,7 @@ import {
 import React from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { formatScriptureRef } from "@/constants/bible";
+import { useEditorEvents } from "../EditorEventsContext";
 
 export interface SerializedComparisonNode extends SerializedLexicalNode {
   bookUSFM: string;
@@ -205,6 +206,7 @@ function ComparisonBadge({
   isCollapsed,
 }: ComparisonBadgeProps) {
   const [editor] = useLexicalComposerContext();
+  const { onEditComparison } = useEditorEvents();
 
   const refText = formatScriptureRef(bookUSFM, chapter, verseStart, verseEnd);
 
@@ -217,6 +219,21 @@ function ComparisonBadge({
         node.setIsCollapsed(!node.getIsCollapsed());
       }
     });
+  };
+
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onEditComparison) {
+      onEditComparison({
+        nodeKey,
+        bookUSFM,
+        chapter,
+        verseStart,
+        verseEnd,
+        comparisons,
+      });
+    }
   };
 
   const translationsLabel = comparisons.map((c) => c.translation).join(" / ");
@@ -234,6 +251,26 @@ function ComparisonBadge({
           <span className="scripture-ref-label">
             {refText} ({translationsLabel})
           </span>
+          <button
+            type="button"
+            className="scripture-badge-edit-btn"
+            onClick={handleEdit}
+            title={`Edit comparison ${refText}`}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+          </button>
           <span className="scripture-icon-arrow">▾</span>
         </span>
       ) : (
@@ -247,14 +284,36 @@ function ComparisonBadge({
               <span className="scripture-icon-bible">📚</span>
               <span>{refText} Comparison</span>
             </span>
-            <button
-              className="scripture-card-toggle"
-              onClick={handleToggle}
-              title="Click to collapse"
-            >
-              {/* <span>Collapse</span> */}
-              <span className="scripture-icon-arrow expanded">▾</span>
-            </button>
+            <div className="scripture-card-actions">
+              <button
+                type="button"
+                className="scripture-card-edit-btn"
+                onClick={handleEdit}
+                title="Edit comparison"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  <path d="m15 5 4 4" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="scripture-card-toggle"
+                onClick={handleToggle}
+                title="Click to collapse"
+              >
+                <span className="scripture-icon-arrow expanded">▾</span>
+              </button>
+            </div>
           </span>
           <div className="comparison-grid">
             {comparisons.map((comp, idx) => (

@@ -10,6 +10,7 @@ import React, { useEffect } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { formatScriptureRef } from "@/constants/bible";
 import { useBiblePassageQuery } from "@/queries/useBiblePassage";
+import { useEditorEvents } from "../EditorEventsContext";
 
 export interface SerializedScriptureNode extends SerializedLexicalNode {
   bookUSFM: string;
@@ -222,6 +223,7 @@ function ScriptureBadge({
   verseText,
 }: ScriptureBadgeProps) {
   const [editor] = useLexicalComposerContext();
+  const { onEditScripture } = useEditorEvents();
 
   const refText = formatScriptureRef(bookUSFM, chapter, verseStart, verseEnd);
 
@@ -257,6 +259,22 @@ function ScriptureBadge({
     });
   };
 
+  const handleEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onEditScripture) {
+      onEditScripture({
+        nodeKey,
+        bookUSFM,
+        chapter,
+        verseStart,
+        verseEnd,
+        translation,
+        verseText: text,
+      });
+    }
+  };
+
   return (
     <>
       {isCollapsed ? (
@@ -270,6 +288,26 @@ function ScriptureBadge({
           <span className="scripture-ref-label">
             {refText} ({translation})
           </span>
+          <button
+            type="button"
+            className="scripture-badge-edit-btn"
+            onClick={handleEdit}
+            title={`Edit ${refText}`}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              <path d="m15 5 4 4" />
+            </svg>
+          </button>
           <span className="scripture-icon-arrow">▾</span>
         </span>
       ) : (
@@ -283,14 +321,36 @@ function ScriptureBadge({
               <span className="scripture-icon-bible">📖</span>
               <span>{refText}</span>
             </span>
-            <button
-              className="scripture-card-toggle"
-              onClick={handleToggle}
-              title="Click to collapse"
-            >
-              {/* <span>Collapse</span> */}
-              <span className="scripture-icon-arrow expanded">▾</span>
-            </button>
+            <div className="scripture-card-actions">
+              <button
+                type="button"
+                className="scripture-card-edit-btn"
+                onClick={handleEdit}
+                title="Edit scripture passage"
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                  <path d="m15 5 4 4" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="scripture-card-toggle"
+                onClick={handleToggle}
+                title="Click to collapse"
+              >
+                <span className="scripture-icon-arrow expanded">▾</span>
+              </button>
+            </div>
           </span>
           <p className="scripture-card-text">
             {loading ? (
