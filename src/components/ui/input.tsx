@@ -54,7 +54,7 @@ export const Input = forwardRef<TextInput, InputProps>(
         <View
           className={cn(
             "flex-row items-center border rounded-xl px-3.5 bg-card",
-            Platform.OS === "ios" ? "pt-2.5 pb-4" : "py-3.5",
+            "py-3.5",
             isFocused
               ? "border-[#e4b022] dark:border-[#d4af37]"
               : "border-border",
@@ -71,6 +71,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             className={cn(
               "flex-1 text-base text-foreground p-0 m-0",
               inputClassName,
+              Platform.OS === "ios" && secureTextEntry ? "-mt-1 mb-1" : "",
             )}
             style={{
               textAlignVertical: props.multiline ? "top" : "center",
