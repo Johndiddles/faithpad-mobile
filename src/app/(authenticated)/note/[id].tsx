@@ -13,6 +13,7 @@ import {
   TextInput,
   useColorScheme,
   View,
+  KeyboardAvoidingView as RNKeyboardAvoidingView,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -1389,105 +1390,124 @@ export default function SingleNoteEditorScreen() {
         animationType="slide"
         onRequestClose={() => setManualBibleModalVisible(false)}
       >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%]">
-            <View className="flex-row justify-between items-center mb-6">
-              <AppText weight="bold" className="text-xl">
-                {isInsertingComparison
-                  ? "Insert Translation Comparison"
-                  : "Insert Bible Card"}
-              </AppText>
-              <Pressable
-                onPress={() => setManualBibleModalVisible(false)}
-                className="p-1.5"
-              >
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={colorScheme === "dark" ? "#e4b022" : "#666666"}
-                />
-              </Pressable>
-            </View>
-
-            <ScrollView className="space-y-4">
-              <View className="">
-                <Dropdown
-                  label={isInsertingComparison ? "Base Translation" : "Version"}
-                  value={bibleVersion}
-                  options={versionOptions}
-                  onSelect={setBibleVersion}
-                  placeholder="Select Version"
-                />
+        <RNKeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          className="flex-1"
+        >
+          <View className="flex-1 bg-black/60 justify-end">
+            <Pressable
+              className="flex-1"
+              onPress={() => setManualBibleModalVisible(false)}
+            />
+            <View className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%]">
+              <View className="flex-row justify-between items-center mb-6">
+                <AppText weight="bold" className="text-xl">
+                  {isInsertingComparison
+                    ? "Insert Translation Comparison"
+                    : "Insert Bible Card"}
+                </AppText>
+                <Pressable
+                  onPress={() => setManualBibleModalVisible(false)}
+                  className="p-1.5"
+                >
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={colorScheme === "dark" ? "#e4b022" : "#666666"}
+                  />
+                </Pressable>
               </View>
-              {isInsertingComparison && (
+
+              <ScrollView
+                className="space-y-4"
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+              >
                 <View className="">
                   <Dropdown
-                    label="Compare With"
-                    value={comparisonVersion}
-                    options={versionOptions.filter(
-                      (opt) => opt.value !== bibleVersion,
-                    )}
-                    onSelect={setComparisonVersion}
-                    placeholder="Select Version to Compare"
+                    label={
+                      isInsertingComparison ? "Base Translation" : "Version"
+                    }
+                    value={bibleVersion}
+                    options={versionOptions}
+                    onSelect={setBibleVersion}
+                    placeholder="Select Version"
+                    searchable
+                    searchPlaceholder="Search versions..."
                   />
                 </View>
-              )}
-              <Dropdown
-                label="Book"
-                value={bibleBook}
-                options={bookOptions}
-                onSelect={handleSelectBook}
-                searchable
-                searchPlaceholder="Search books..."
-                placeholder="Select Book"
-              />
+                {isInsertingComparison && (
+                  <View className="">
+                    <Dropdown
+                      label="Compare With"
+                      value={comparisonVersion}
+                      options={versionOptions.filter(
+                        (opt) => opt.value !== bibleVersion,
+                      )}
+                      onSelect={setComparisonVersion}
+                      placeholder="Select Version to Compare"
+                      searchable
+                      searchPlaceholder="Search versions..."
+                    />
+                  </View>
+                )}
+                <Dropdown
+                  label="Book"
+                  value={bibleBook}
+                  options={bookOptions}
+                  onSelect={handleSelectBook}
+                  searchable
+                  searchPlaceholder="Search books..."
+                  placeholder="Select Book"
+                />
 
-              <Dropdown
-                label="Chapter"
-                value={bibleChapter}
-                options={chapterOptions}
-                onSelect={handleSelectChapter}
-                placeholder="Select Chapter"
-                layout="grid"
-              />
+                <Dropdown
+                  label="Chapter"
+                  value={bibleChapter}
+                  options={chapterOptions}
+                  onSelect={handleSelectChapter}
+                  placeholder="Select Chapter"
+                  layout="grid"
+                />
 
-              <View className="flex-row gap-x-4 mb-4">
-                <View className="flex-1">
-                  <Dropdown
-                    label="Start Verse"
-                    value={bibleVerse}
-                    options={startVerseOptions}
-                    onSelect={handleSelectVerse}
-                    placeholder="Start"
-                    layout="grid"
-                  />
+                <View className="flex-row gap-x-4 mb-4">
+                  <View className="flex-1">
+                    <Dropdown
+                      label="Start Verse"
+                      value={bibleVerse}
+                      options={startVerseOptions}
+                      onSelect={handleSelectVerse}
+                      placeholder="Start"
+                      layout="grid"
+                    />
+                  </View>
+
+                  <View className="flex-1">
+                    <Dropdown
+                      label="End Verse"
+                      value={bibleVerseEnd}
+                      options={endVerseOptions}
+                      onSelect={setBibleVerseEnd}
+                      placeholder="End"
+                      layout="grid"
+                    />
+                  </View>
                 </View>
 
-                <View className="flex-1">
-                  <Dropdown
-                    label="End Verse"
-                    value={bibleVerseEnd}
-                    options={endVerseOptions}
-                    onSelect={setBibleVerseEnd}
-                    placeholder="End"
-                    layout="grid"
-                  />
-                </View>
-              </View>
-
-              <Button
-                title={
-                  isInsertingComparison
-                    ? "Insert Side-by-Side Comparison"
-                    : "Insert Scripture Card"
-                }
-                variant="gold"
-                onPress={handleInsertManualScripture}
-                className="w-full py-4 mt-2"
-              />
-            </ScrollView>
+                <Button
+                  title={
+                    isInsertingComparison
+                      ? "Insert Side-by-Side Comparison"
+                      : "Insert Scripture Card"
+                  }
+                  variant="gold"
+                  onPress={handleInsertManualScripture}
+                  className="w-full py-4 mt-2"
+                />
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </RNKeyboardAvoidingView>
       </Modal>
 
       {/* Delete Confirmation Modal */}

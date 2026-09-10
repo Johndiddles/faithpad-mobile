@@ -65,6 +65,8 @@ const DefaultTranslationModal = ({
               options={versionOptions}
               onSelect={(val) => setSelectedTranslation(val)}
               placeholder="Select Translation"
+              searchable
+              searchPlaceholder="Search translations..."
             />
           </View>
 

@@ -175,6 +175,8 @@ export default function SettingsScreen() {
               options={versionOptions}
               onSelect={handleUpdateTranslation}
               placeholder="Select Default Version"
+              searchable
+              searchPlaceholder="Search translations..."
             />
           </View>
 
