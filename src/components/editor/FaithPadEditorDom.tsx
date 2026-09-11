@@ -30,14 +30,20 @@ import {
   $getRoot,
   $createParagraphNode,
   $createTextNode,
+  $getNodeByKey,
 } from "lexical";
 import {
   $patchStyleText,
   $getSelectionStyleValueForProperty,
 } from "@lexical/selection";
 
-import { ScriptureNode, $createScriptureNode } from "./nodes/ScriptureNode";
-import { ComparisonNode, $createComparisonNode } from "./nodes/ComparisonNode";
+import { ScriptureNode, $createScriptureNode, $isScriptureNode } from "./nodes/ScriptureNode";
+import { ComparisonNode, $createComparisonNode, $isComparisonNode } from "./nodes/ComparisonNode";
+import {
+  EditorEventsContext,
+  ScriptureDataPayload,
+  ComparisonDataPayload,
+} from "./EditorEventsContext";
 import "./FaithPadEditor.css";
 
 export interface ActiveFormats {
@@ -287,6 +293,41 @@ function CommandPlugin({ command }: CommandPluginProps) {
                 true, // starts collapsed
               );
               selection.insertNodes([node]);
+            }
+          });
+          break;
+        case "update-scripture":
+          editor.update(() => {
+            const node = $getNodeByKey(command.value.nodeKey);
+            if ($isScriptureNode(node)) {
+              const isCollapsed = node.getIsCollapsed();
+              const newNode = $createScriptureNode(
+                command.value.bookUSFM,
+                command.value.chapter,
+                command.value.verseStart,
+                command.value.verseEnd || command.value.verseStart,
+                command.value.translation,
+                isCollapsed,
+                command.value.verseText || "",
+              );
+              node.replace(newNode);
+            }
+          });
+          break;
+        case "update-comparison":
+          editor.update(() => {
+            const node = $getNodeByKey(command.value.nodeKey);
+            if ($isComparisonNode(node)) {
+              const isCollapsed = node.getIsCollapsed();
+              const newNode = $createComparisonNode(
+                command.value.bookUSFM,
+                command.value.chapter,
+                command.value.verseStart,
+                command.value.verseEnd || command.value.verseStart,
+                command.value.comparisons,
+                isCollapsed,
+              );
+              node.replace(newNode);
             }
           });
           break;
@@ -680,6 +721,8 @@ interface FaithPadEditorDomProps {
   initialContent?: string;
   onChange?: (json: string) => void;
   onFormatChange?: (formats: ActiveFormats) => void;
+  onEditScripture?: (scripture: ScriptureDataPayload) => void;
+  onEditComparison?: (comparison: ComparisonDataPayload) => void;
   theme?: "light" | "dark";
   registerApi?: (api: any) => void;
   command?: { id: string; type: string; value?: any } | null;
@@ -691,6 +734,8 @@ export default function FaithPadEditorDom({
   initialContent,
   onChange,
   onFormatChange,
+  onEditScripture,
+  onEditComparison,
   theme = "light",
   registerApi,
   command,
@@ -727,27 +772,31 @@ export default function FaithPadEditorDom({
   return (
     <QueryClientProvider client={localQueryClient}>
       <div className={`editor-container theme-${theme}`}>
-        <LexicalComposer initialConfig={initialConfig}>
-          <div className="flex-1">
-            <RichTextPlugin
-              contentEditable={<ContentEditable className="editor-input" />}
-              placeholder={
-                <div className="editor-placeholder">
-                  Type notes, or reference scriptures...
-                </div>
-              }
-              ErrorBoundary={({ children }: any) => <>{children}</>}
-            />
-          </div>
-          <HistoryPlugin />
-          <ListPlugin />
-          <InitialContentPlugin content={initialContent} />
-          {onChange && <OnChangePlugin onChange={handleEditorChange} />}
-          <BridgePlugin registerApi={registerApi} />
-          <CommandPlugin command={command} />
-          <FormatTrackerPlugin onFormatChange={onFormatChange} />
-          <FloatingToolbarPlugin theme={theme} />
-        </LexicalComposer>
+        <EditorEventsContext.Provider
+          value={{ onEditScripture, onEditComparison }}
+        >
+          <LexicalComposer initialConfig={initialConfig}>
+            <div className="flex-1">
+              <RichTextPlugin
+                contentEditable={<ContentEditable className="editor-input" />}
+                placeholder={
+                  <div className="editor-placeholder">
+                    Type notes, or reference scriptures...
+                  </div>
+                }
+                ErrorBoundary={({ children }: any) => <>{children}</>}
+              />
+            </div>
+            <HistoryPlugin />
+            <ListPlugin />
+            <InitialContentPlugin content={initialContent} />
+            {onChange && <OnChangePlugin onChange={handleEditorChange} />}
+            <BridgePlugin registerApi={registerApi} />
+            <CommandPlugin command={command} />
+            <FormatTrackerPlugin onFormatChange={onFormatChange} />
+            <FloatingToolbarPlugin theme={theme} />
+          </LexicalComposer>
+        </EditorEventsContext.Provider>
       </div>
     </QueryClientProvider>
   );

@@ -367,6 +367,34 @@ body {
   transform: rotate(180deg);
 }
 
+.scripture-badge-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  margin: 0 1px;
+  color: var(--badge-text);
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.65;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.scripture-badge-edit-btn:hover {
+  opacity: 1;
+  color: var(--editor-accent);
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.theme-dark .scripture-badge-edit-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
 /* Scripture Node Expanded Card */
 .scripture-card-expanded {
   display: block;
@@ -397,6 +425,35 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.scripture-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.scripture-card-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--badge-text);
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.scripture-card-edit-btn:hover {
+  opacity: 1;
+  color: var(--editor-accent);
+  background-color: var(--tb-btn-hover);
 }
 
 .scripture-card-toggle {

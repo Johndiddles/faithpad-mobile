@@ -327,3 +327,24 @@ export const useNotesStore = create<NoteState>()(
     },
   ),
 );
+
+export type ThemePreference = "system" | "light" | "dark";
+
+interface ThemeState {
+  themePreference: ThemePreference;
+  setThemePreference: (pref: ThemePreference) => void;
+}
+
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set) => ({
+      themePreference: "system",
+      setThemePreference: (pref) => set({ themePreference: pref }),
+    }),
+    {
+      name: "faith-pad-theme",
+      storage: createJSONStorage(() => mmkvStorage),
+    },
+  ),
+);
+

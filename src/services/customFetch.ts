@@ -14,7 +14,6 @@ import { createMMKV } from "react-native-mmkv";
 
 const Storage = createMMKV({
   id: "auth-store",
-  // encryptionKey: "faithpad-auth-encryption-key",
 });
 
 const getTokens = () => {
@@ -67,9 +66,6 @@ apiClient.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const response = error?.response;
-    const errData = response as object;
-    console.log(JSON.stringify({ errData }, null, 2));
-    // const originalRequest = error.config as CustomAxiosRequestConfig;
 
     if (response?.status === 401) {
       const currentToken = useAuthStore.getState().token;
