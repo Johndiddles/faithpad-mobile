@@ -7,12 +7,12 @@ import { StatusBar } from "expo-status-bar";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Platform, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore, useNotesStore } from "../../store";
 import { GOOGLE_CLIENT_ID, PRIVACY_POLICY_URL } from "@/constants/env";
 import { updateUserSettingsApi } from "@/services/api";
 import { customFetch } from "@/services/customFetch";
 import DefaultTranslationModal from "@/components/welcome/DefaultTranslationModal";
-import logo from "@/assets/images/icon.png";
 
 WebBrowser.maybeCompleteAuthSession();
 const redirectUri = makeRedirectUri({
@@ -26,6 +26,7 @@ interface AuthGoogleResponse {
 }
 
 export default function WelcomeScreen() {
+  const insets = useSafeAreaInsets();
   const { signIn } = useAuthStore();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [pendingNewUser, setPendingNewUser] = useState<{
@@ -153,12 +154,18 @@ export default function WelcomeScreen() {
         <View className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full bg-[#d4af37]/5 blur-3xl" />
       </View>
 
-      <View className="flex-1 justify-between px-6 pb-12 pt-20">
+      <View
+        className="flex-1 justify-between px-6 pt-20"
+        style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+      >
         {/* App Logo & Header Section */}
         <View className="items-center mt-6">
           <View className="w-20 h-20 bg-[#e4b022] rounded-3xl items-center justify-center shadow-lg shadow-gold/40 mb-4 overflow-hidden">
             {/* <Ionicons name="book" size={42} color="white" /> */}
-            <Image source={logo} className="w-full h-full" />
+            <Image
+              source={require("../../../assets/images/icon.png")}
+              className="w-full h-full"
+            />
           </View>
           <AppText weight="bold" className="text-4xl text-white tracking-wider">
             FAITH

@@ -9,7 +9,8 @@ import {
   Image,
   // ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/ui/app-text";
@@ -18,6 +19,7 @@ import { useAuthStore, useNotesStore } from "../../store";
 import { useFoldersQuery } from "@/queries/useFolders";
 
 export default function FoldersScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuthStore();
   const {
@@ -312,7 +314,7 @@ export default function FoldersScreen() {
       {/* iOS styled Bottom Toolbar */}
       <View
         className="flex-row items-center justify-between px-6 py-4 bg-background border-t border-border"
-        style={{ paddingBottom: Platform.OS === "ios" ? 24 : 16 }}
+        style={{ paddingBottom: Math.max(insets.bottom, 14) }}
       >
         <Pressable
           onPress={handleOpenCreateModal}
@@ -347,46 +349,48 @@ export default function FoldersScreen() {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View className="flex-1 bg-black/60 items-center justify-center px-6">
-          <View className="w-full bg-card rounded-2xl p-5 border border-border">
-            <AppText weight="bold" className="text-lg mb-4 text-center">
-              {editingFolderId ? "Rename Folder" : "New Folder"}
-            </AppText>
-
-            <TextInput
-              value={folderName}
-              onChangeText={(txt) => {
-                setFolderName(txt);
-                setValidationError("");
-              }}
-              placeholder="e.g. Sermon Outlines"
-              placeholderTextColor="hsl(var(--muted-foreground))"
-              autoFocus
-              className="border border-border rounded-xl px-4 py-3 bg-background text-foreground text-base mb-2"
-            />
-
-            {validationError ? (
-              <AppText className="text-xs text-destructive mb-3">
-                {validationError}
+        <KeyboardAvoidingView behavior="padding" className="flex-1">
+          <View className="flex-1 bg-black/60 items-center justify-center px-6">
+            <View className="w-full bg-card rounded-2xl p-5 border border-border">
+              <AppText weight="bold" className="text-lg mb-4 text-center">
+                {editingFolderId ? "Rename Folder" : "New Folder"}
               </AppText>
-            ) : null}
 
-            <View className="flex-row gap-x-3 mt-2">
-              <Button
-                title="Cancel"
-                variant="secondary"
-                onPress={() => setModalVisible(false)}
-                className="flex-1"
+              <TextInput
+                value={folderName}
+                onChangeText={(txt) => {
+                  setFolderName(txt);
+                  setValidationError("");
+                }}
+                placeholder="e.g. Sermon Outlines"
+                placeholderTextColor="hsl(var(--muted-foreground))"
+                autoFocus
+                className="border border-border rounded-xl px-4 py-3 bg-background text-foreground text-base mb-2"
               />
-              <Button
-                title="Save"
-                variant="gold"
-                onPress={handleSaveFolder}
-                className="flex-1"
-              />
+
+              {validationError ? (
+                <AppText className="text-xs text-destructive mb-3">
+                  {validationError}
+                </AppText>
+              ) : null}
+
+              <View className="flex-row gap-x-3 mt-2">
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  onPress={() => setModalVisible(false)}
+                  className="flex-1"
+                />
+                <Button
+                  title="Save"
+                  variant="gold"
+                  onPress={handleSaveFolder}
+                  className="flex-1"
+                />
+              </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Folder Confirmation Modal */}

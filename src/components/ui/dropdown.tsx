@@ -6,8 +6,8 @@ import {
   Modal,
   Platform,
   FlatList,
-  KeyboardAvoidingView,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
 import { AppText } from "./app-text";
@@ -112,7 +112,7 @@ export function Dropdown({
         }}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior="padding"
           className="flex-1"
         >
           <View className="flex-1 bg-black/60 justify-end">

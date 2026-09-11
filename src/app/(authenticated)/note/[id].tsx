@@ -12,10 +12,9 @@ import {
   ScrollView,
   TextInput,
   View,
-  KeyboardAvoidingView as RNKeyboardAvoidingView,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -174,6 +173,7 @@ function migrateBlocksToLexical(oldBlocks: EditorBlock[]): string {
 // });
 
 export default function SingleNoteEditorScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const noteId = params.id;
@@ -768,10 +768,11 @@ export default function SingleNoteEditorScreen() {
 
         {canEdit && (
           <View
-            className="mx-4 mb-5 rounded-full border border-black/10 dark:border-white/15 bg-[#faf8f5]/95 dark:bg-zinc-900/90 shadow-2xl shadow-black/15 dark:shadow-black/70 overflow-hidden"
+            className="mx-4 rounded-full border border-black/10 dark:border-white/15 bg-[#faf8f5]/95 dark:bg-zinc-900/90 shadow-2xl shadow-black/15 dark:shadow-black/70 overflow-hidden"
             style={{
               elevation: 8,
               borderRadius: 9999,
+              marginBottom: Math.max(insets.bottom, 14),
             }}
           >
             <GlassView
@@ -1031,7 +1032,10 @@ export default function SingleNoteEditorScreen() {
         onRequestClose={() => setInsertModalVisible(false)}
       >
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%] pb-10">
+          <View
+            className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%]"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
             <View className="flex-row justify-between items-center mb-6">
               <AppText weight="bold" className="text-xl">
                 Insert
@@ -1202,7 +1206,10 @@ export default function SingleNoteEditorScreen() {
         onRequestClose={() => setTextColorModalVisible(false)}
       >
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-card rounded-t-3xl p-6 border-t border-border pb-10">
+          <View
+            className="bg-card rounded-t-3xl p-6 border-t border-border"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
             <View className="flex-row justify-between items-center mb-6">
               <AppText weight="bold" className="text-xl">
                 Text Color
@@ -1263,7 +1270,10 @@ export default function SingleNoteEditorScreen() {
         onRequestClose={() => setHighlightColorModalVisible(false)}
       >
         <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-card rounded-t-3xl p-6 border-t border-border pb-10">
+          <View
+            className="bg-card rounded-t-3xl p-6 border-t border-border"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
             <View className="flex-row justify-between items-center mb-6">
               <AppText weight="bold" className="text-xl">
                 Highlight Color
@@ -1478,8 +1488,8 @@ export default function SingleNoteEditorScreen() {
           setEditingNodeKey(null);
         }}
       >
-        <RNKeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <KeyboardAvoidingView
+          behavior="padding"
           className="flex-1"
         >
           <View className="flex-1 bg-black/60 justify-end">
@@ -1490,7 +1500,10 @@ export default function SingleNoteEditorScreen() {
                 setEditingNodeKey(null);
               }}
             />
-            <View className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%]">
+            <View
+              className="bg-card rounded-t-3xl p-6 border-t border-border max-h-[85%]"
+              style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+            >
               <View className="flex-row justify-between items-center mb-6">
                 <AppText weight="bold" className="text-xl">
                   {editingNodeKey
@@ -1609,7 +1622,7 @@ export default function SingleNoteEditorScreen() {
               </ScrollView>
             </View>
           </View>
-        </RNKeyboardAvoidingView>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Confirmation Modal */}

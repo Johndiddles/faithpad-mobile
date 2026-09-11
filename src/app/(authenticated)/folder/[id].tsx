@@ -8,7 +8,7 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
@@ -24,6 +24,7 @@ import {
 } from "@/lib/utils";
 
 export default function FolderNotesListScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const folderId = params.id;
@@ -303,7 +304,7 @@ export default function FolderNotesListScreen() {
       {/* iOS styled Bottom Toolbar */}
       <View
         className="flex-row items-center justify-between px-6 py-4 bg-background border-t border-border"
-        style={{ paddingBottom: Platform.OS === "ios" ? 24 : 16 }}
+        style={{ paddingBottom: Math.max(insets.bottom, 14) }}
       >
         <View className="w-6" />
         <AppText className="text-xs text-muted-foreground">
@@ -327,7 +328,10 @@ export default function FolderNotesListScreen() {
         onRequestClose={() => setOptionsModalVisible(false)}
       >
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-card rounded-t-3xl p-6 border-t border-border">
+          <View
+            className="bg-card rounded-t-3xl p-6 border-t border-border"
+            style={{ paddingBottom: Math.max(insets.bottom, 24) }}
+          >
             <AppText
               weight="bold"
               className="text-lg text-center mb-6"

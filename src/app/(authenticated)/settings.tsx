@@ -6,7 +6,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +19,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { WEBSITE_URL, PRIVACY_POLICY_URL } from "@/constants/env";
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, updateSettings, signOut } = useAuthStore();
   const { themePreference, setThemePreference } = useThemeStore();
@@ -152,7 +153,10 @@ export default function SettingsScreen() {
         <View className="w-12" />
       </View>
 
-      <ScrollView className="flex-1 px-6 pt-6">
+      <ScrollView
+        className="flex-1 px-6 pt-6"
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 24) }}
+      >
         <AppText
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
