@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Modal, View, useColorScheme } from "react-native";
+import { Modal, View } from "react-native";
 import { AppText } from "../ui/app-text";
 import { Dropdown } from "../ui/dropdown";
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 const DefaultTranslationModal = ({
   isOpen = false,

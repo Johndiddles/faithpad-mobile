@@ -8,15 +8,20 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
-import { useAuthStore } from "../../store";
+import { useAuthStore, useThemeStore, ThemePreference } from "../../store";
 import { Dropdown } from "@/components/ui/dropdown";
 import { useBibleVersionsQuery } from "@/queries/useBibleVersions";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, updateSettings, signOut } = useAuthStore();
+  const { themePreference, setThemePreference } = useThemeStore();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   const handleUpdateTranslation = (translation: string) => {
     updateSettings(translation, user?.aiDetectionEnabled !== false);
@@ -87,6 +92,28 @@ export default function SettingsScreen() {
         value: v.abbreviation,
       }))
     : [];
+
+  const themeOptions: {
+    value: ThemePreference;
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+  }[] = [
+    {
+      value: "system",
+      label: "Device",
+      icon: "phone-portrait-outline",
+    },
+    {
+      value: "light",
+      label: "Light",
+      icon: "sunny-outline",
+    },
+    {
+      value: "dark",
+      label: "Dark",
+      icon: "moon-outline",
+    },
+  ];
 
   return (
     <SafeAreaView
@@ -160,6 +187,65 @@ export default function SettingsScreen() {
           weight="semibold"
           className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
         >
+          Appearance
+        </AppText>
+        <View className="bg-secondary/15 rounded-2xl border border-border p-4 mb-6">
+          <AppText
+            weight="semibold"
+            className="text-sm text-foreground/90 mb-1"
+          >
+            Theme Mode
+          </AppText>
+          <AppText className="text-xs text-muted-foreground mb-3.5">
+            Choose how Faith Pad appears on your device.
+          </AppText>
+
+          <View className="flex-row gap-2.5">
+            {themeOptions.map((opt) => {
+              const isSelected = themePreference === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => setThemePreference(opt.value)}
+                  className={`flex-1 items-center justify-center py-3.5 px-2 rounded-xl border ${
+                    isSelected
+                      ? "bg-[#e4b022]/15 border-[#e4b022] dark:bg-[#d4af37]/20 dark:border-[#d4af37]"
+                      : "bg-secondary/30 border-border"
+                  }`}
+                >
+                  <Ionicons
+                    name={opt.icon}
+                    size={22}
+                    color={
+                      isSelected
+                        ? isDark
+                          ? "#d4af37"
+                          : "#e4b022"
+                        : isDark
+                          ? "#9ca3af"
+                          : "#6b7280"
+                    }
+                  />
+                  <AppText
+                    weight={isSelected ? "bold" : "medium"}
+                    className={`text-xs mt-2 text-center ${
+                      isSelected
+                        ? "text-[#e4b022] dark:text-[#d4af37]"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <AppText
+          weight="semibold"
+          className="text-xs text-muted-foreground uppercase tracking-widest mb-3"
+        >
           Theological Tools
         </AppText>
         <View className="bg-secondary/15 rounded-2xl border border-border p-4 mb-6 gap-y-4">
@@ -206,6 +292,7 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
+
 
         <AppText
           weight="semibold"

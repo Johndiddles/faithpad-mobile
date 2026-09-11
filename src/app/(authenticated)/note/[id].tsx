@@ -11,7 +11,6 @@ import {
   Pressable,
   ScrollView,
   TextInput,
-  useColorScheme,
   View,
   KeyboardAvoidingView as RNKeyboardAvoidingView,
 } from "react-native";
@@ -20,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppText } from "@/components/ui/app-text";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { parseScriptureRef } from "../../../lib/bible";
 import { BlockType, EditorBlock } from "../../../lib/types";
 import { fetchBiblePassage } from "../../../services/youversion";

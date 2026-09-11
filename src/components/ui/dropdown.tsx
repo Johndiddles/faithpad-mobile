@@ -5,7 +5,6 @@ import {
   TextInput,
   Modal,
   Platform,
-  useColorScheme,
   FlatList,
   KeyboardAvoidingView,
 } from "react-native";
@@ -13,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { cn } from "@/lib/utils";
 import { AppText } from "./app-text";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export interface DropdownOption {
   label: string;
