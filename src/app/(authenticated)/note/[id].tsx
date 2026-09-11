@@ -1,18 +1,22 @@
 import { Entypo, Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
   Easing,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   TextInput,
   View,
 } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/ui/app-text";
@@ -273,6 +277,72 @@ export default function SingleNoteEditorScreen() {
     isBulletList: false,
     isOrderedList: false,
   });
+
+  // Toolbar horizontal scroll tracking & indicator
+  const toolbarScrollRef = useRef<ScrollView>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const toolbarScrollXRef = useRef(0);
+  const toolbarContentWRef = useRef(0);
+  const toolbarLayoutWRef = useRef(0);
+
+  const [bounceChevronAnim] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounceChevronAnim, {
+          toValue: 3,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounceChevronAnim, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bounceChevronAnim]);
+
+  const updateToolbarScrollIndicators = useCallback(() => {
+    const contentW = toolbarContentWRef.current;
+    const layoutW = toolbarLayoutWRef.current;
+    const x = toolbarScrollXRef.current;
+    if (contentW > 0 && layoutW > 0) {
+      setCanScrollLeft(x > 6);
+      setCanScrollRight(x < contentW - layoutW - 6);
+    }
+  }, []);
+
+  const handleToolbarScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    toolbarScrollXRef.current = x;
+    const contentW = e.nativeEvent.contentSize.width;
+    const layoutW = e.nativeEvent.layoutMeasurement.width;
+    toolbarContentWRef.current = contentW;
+    toolbarLayoutWRef.current = layoutW;
+    setCanScrollLeft(x > 6);
+    setCanScrollRight(x < contentW - layoutW - 6);
+  };
+
+  const scrollToolbarRight = () => {
+    const maxScroll = Math.max(
+      0,
+      toolbarContentWRef.current - toolbarLayoutWRef.current,
+    );
+    const targetX = Math.min(maxScroll, toolbarScrollXRef.current + 140);
+    toolbarScrollRef.current?.scrollTo({ x: targetX, animated: true });
+  };
+
+  const scrollToolbarLeft = () => {
+    const targetX = Math.max(0, toolbarScrollXRef.current - 140);
+    toolbarScrollRef.current?.scrollTo({ x: targetX, animated: true });
+  };
 
   const textColors =
     theme === "dark"
@@ -790,8 +860,9 @@ export default function SingleNoteEditorScreen() {
               {/* Docked Insert/Attachment Button on the Left */}
               <Pressable
                 onPress={() => setInsertModalVisible(true)}
-                className="py-4 px-4 pr-5.5 border-r border-border/70 active:opacity-60 justify-center items-center"
+                className="py-4 px-3.5 pr-4 border-r border-border/70 active:opacity-60 justify-center items-center"
                 style={{ flexShrink: 0 }}
+                accessibilityLabel="Insert scripture or comparison"
               >
                 <Entypo
                   name="attachment"
@@ -800,225 +871,369 @@ export default function SingleNoteEditorScreen() {
                 />
               </Pressable>
 
-              {/* Scrollable Formatting Options on the Right */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="flex-1"
-                style={{ flex: 1 }}
-                contentContainerStyle={{
-                  alignItems: "center",
-                  paddingLeft: 14,
-                  paddingRight: 10,
-                  columnGap: 18,
-                }}
-              >
-                {/* Bold */}
-                <Pressable
-                  onPress={() => editorRef.current?.toggleBold()}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.isBold
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
+              {/* Scrollable Formatting Options Container with Visual Cues */}
+              <View className="flex-1 relative flex-row items-center overflow-hidden">
+                {/* Left Scroll Indicator & Gradient Fade */}
+                {canScrollLeft && (
+                  <View
+                    pointerEvents="box-none"
+                    className="absolute left-0 top-0 bottom-0 flex-row items-center justify-start pl-0.5 z-20"
+                    style={{ width: 40 }}
+                  >
+                    <Svg
+                      height="100%"
+                      width="100%"
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="none"
+                    >
+                      <Defs>
+                        <LinearGradient
+                          id="toolbarFadeLeft"
+                          x1="1"
+                          y1="0"
+                          x2="0"
+                          y2="0"
+                        >
+                          <Stop
+                            offset="0"
+                            stopColor={theme === "dark" ? "#18181b" : "#faf8f5"}
+                            stopOpacity="0"
+                          />
+                          <Stop
+                            offset="0.55"
+                            stopColor={theme === "dark" ? "#18181b" : "#faf8f5"}
+                            stopOpacity="0.85"
+                          />
+                          <Stop
+                            offset="1"
+                            stopColor={theme === "dark" ? "#18181b" : "#faf8f5"}
+                            stopOpacity="0.98"
+                          />
+                        </LinearGradient>
+                      </Defs>
+                      <Rect
+                        x="0"
+                        y="0"
+                        width="100%"
+                        height="100%"
+                        fill="url(#toolbarFadeLeft)"
+                      />
+                    </Svg>
+
+                    <Pressable
+                      onPress={scrollToolbarLeft}
+                      hitSlop={8}
+                      className="w-5.5 h-5.5 rounded-full bg-[#faf8f5]/90 dark:bg-zinc-800/90 border border-[#e4b022]/40 dark:border-[#d4af37]/40 items-center justify-center active:scale-95 shadow-sm"
+                      accessibilityLabel="Scroll toolbar left"
+                    >
+                      <Ionicons
+                        name="chevron-back"
+                        size={13}
+                        color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                      />
+                    </Pressable>
+                  </View>
+                )}
+
+                {/* Right Scroll Indicator & Gradient Fade */}
+                {canScrollRight && (
+                  <View
+                    pointerEvents="box-none"
+                    className="absolute right-0 top-0 bottom-0 flex-row items-center justify-end pr-0.5 z-20"
+                    style={{ width: 44 }}
+                  >
+                    <Svg
+                      height="100%"
+                      width="100%"
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="none"
+                    >
+                      <Defs>
+                        <LinearGradient
+                          id="toolbarFadeRight"
+                          x1="0"
+                          y1="0"
+                          x2="1"
+                          y2="0"
+                        >
+                          <Stop
+                            offset="0"
+                            stopColor={theme === "dark" ? "#18181b" : "#faf8f5"}
+                            stopOpacity="0"
+                          />
+                          <Stop
+                            offset="0.5"
+                            stopColor={theme === "dark" ? "#18181b" : "#faf8f5"}
+                            stopOpacity="0.85"
+                          />
+                          <Stop
+                            offset="1"
+                            stopColor={theme === "dark" ? "#18181b" : "#faf8f5"}
+                            stopOpacity="0.98"
+                          />
+                        </LinearGradient>
+                      </Defs>
+                      <Rect
+                        x="0"
+                        y="0"
+                        width="100%"
+                        height="100%"
+                        fill="url(#toolbarFadeRight)"
+                      />
+                    </Svg>
+
+                    <Animated.View
+                      style={{
+                        transform: [{ translateX: bounceChevronAnim }],
+                      }}
+                    >
+                      <Pressable
+                        onPress={scrollToolbarRight}
+                        hitSlop={8}
+                        className="w-5.5 h-5.5 rounded-full bg-[#faf8f5]/90 dark:bg-zinc-800/90 border border-[#e4b022]/40 dark:border-[#d4af37]/40 items-center justify-center active:scale-95 shadow-sm"
+                        accessibilityLabel="Scroll toolbar right for more options"
+                      >
+                        <Ionicons
+                          name="chevron-forward"
+                          size={13}
+                          color={theme === "dark" ? "#d4af37" : "#e4b022"}
+                        />
+                      </Pressable>
+                    </Animated.View>
+                  </View>
+                )}
+
+                {/* Scrollable Formatting Options */}
+                <ScrollView
+                  ref={toolbarScrollRef}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={handleToolbarScroll}
+                  scrollEventThrottle={16}
+                  onContentSizeChange={(w) => {
+                    toolbarContentWRef.current = w;
+                    updateToolbarScrollIndicators();
+                  }}
+                  onLayout={(e) => {
+                    toolbarLayoutWRef.current = e.nativeEvent.layout.width;
+                    updateToolbarScrollIndicators();
+                  }}
+                  className="flex-1"
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{
+                    alignItems: "center",
+                    paddingLeft: 12,
+                    paddingRight: 16,
+                    columnGap: 18,
+                  }}
                 >
-                  <AppText
-                    weight="bold"
-                    className={`text-xl ${
+                  {/* Bold */}
+                  <Pressable
+                    onPress={() => editorRef.current?.toggleBold()}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
                       activeFormats.isBold
-                        ? "text-[#e4b022] dark:text-[#d4af37]"
-                        : "text-foreground"
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
                     }`}
                   >
-                    B
-                  </AppText>
-                </Pressable>
-
-                {/* Italic */}
-                <Pressable
-                  onPress={() => editorRef.current?.toggleItalic()}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.isItalic
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <AppText
-                    weight="medium"
-                    style={{ fontStyle: "italic" }}
-                    className={`text-xl ${
-                      activeFormats.isItalic
-                        ? "text-[#e4b022] dark:text-[#d4af37]"
-                        : "text-foreground"
-                    }`}
-                  >
-                    I
-                  </AppText>
-                </Pressable>
-
-                {/* Underline */}
-                <Pressable
-                  onPress={() => editorRef.current?.toggleUnderline()}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.isUnderline
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <AppText
-                    weight="medium"
-                    style={{ textDecorationLine: "underline" }}
-                    className={`text-xl ${
-                      activeFormats.isUnderline
-                        ? "text-[#e4b022] dark:text-[#d4af37]"
-                        : "text-foreground"
-                    }`}
-                  >
-                    U
-                  </AppText>
-                </Pressable>
-
-                {/* Strikethrough */}
-                <Pressable
-                  onPress={() => editorRef.current?.toggleStrikethrough()}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.isStrikethrough
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <AppText
-                    weight="medium"
-                    style={{ textDecorationLine: "line-through" }}
-                    className={`text-xl ${
-                      activeFormats.isStrikethrough
-                        ? "text-[#e4b022] dark:text-[#d4af37]"
-                        : "text-foreground"
-                    }`}
-                  >
-                    S
-                  </AppText>
-                </Pressable>
-
-                {/* Bullet List */}
-                <Pressable
-                  onPress={() => editorRef.current?.toggleBulletList()}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.isBulletList
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <Ionicons
-                    name="list-outline"
-                    size={22}
-                    color={
-                      activeFormats.isBulletList
-                        ? Platform.OS === "ios"
-                          ? "#e4b022"
-                          : "#d4af37"
-                        : theme === "dark"
-                          ? "#e5e5ea"
-                          : "#2c2a29"
-                    }
-                  />
-                </Pressable>
-
-                {/* Ordered List */}
-                <Pressable
-                  onPress={() => editorRef.current?.toggleOrderedList()}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.isOrderedList
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <Ionicons
-                    name="list-circle-outline"
-                    size={23}
-                    color={
-                      activeFormats.isOrderedList
-                        ? Platform.OS === "ios"
-                          ? "#e4b022"
-                          : "#d4af37"
-                        : theme === "dark"
-                          ? "#e5e5ea"
-                          : "#2c2a29"
-                    }
-                  />
-                </Pressable>
-
-                {/* Text Color */}
-                <Pressable
-                  onPress={() => setTextColorModalVisible(true)}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.textColor &&
-                    activeFormats.textColor !== "inherit" &&
-                    activeFormats.textColor !== "transparent" &&
-                    activeFormats.textColor !== ""
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <View className="items-center justify-center">
                     <AppText
                       weight="bold"
-                      className={`text-[17px] leading-none ${
-                        activeFormats.textColor &&
-                        activeFormats.textColor !== "inherit" &&
-                        activeFormats.textColor !== "transparent" &&
-                        activeFormats.textColor !== ""
+                      className={`text-xl ${
+                        activeFormats.isBold
                           ? "text-[#e4b022] dark:text-[#d4af37]"
                           : "text-foreground"
                       }`}
                     >
-                      A
+                      B
                     </AppText>
-                    <View
-                      className="w-4 h-[3px] rounded-sm mt-0.5"
-                      style={{
-                        backgroundColor:
+                  </Pressable>
+
+                  {/* Italic */}
+                  <Pressable
+                    onPress={() => editorRef.current?.toggleItalic()}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
+                      activeFormats.isItalic
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <AppText
+                      weight="medium"
+                      style={{ fontStyle: "italic" }}
+                      className={`text-xl ${
+                        activeFormats.isItalic
+                          ? "text-[#e4b022] dark:text-[#d4af37]"
+                          : "text-foreground"
+                      }`}
+                    >
+                      I
+                    </AppText>
+                  </Pressable>
+
+                  {/* Underline */}
+                  <Pressable
+                    onPress={() => editorRef.current?.toggleUnderline()}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
+                      activeFormats.isUnderline
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <AppText
+                      weight="medium"
+                      style={{ textDecorationLine: "underline" }}
+                      className={`text-xl ${
+                        activeFormats.isUnderline
+                          ? "text-[#e4b022] dark:text-[#d4af37]"
+                          : "text-foreground"
+                      }`}
+                    >
+                      U
+                    </AppText>
+                  </Pressable>
+
+                  {/* Strikethrough */}
+                  <Pressable
+                    onPress={() => editorRef.current?.toggleStrikethrough()}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
+                      activeFormats.isStrikethrough
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <AppText
+                      weight="medium"
+                      style={{ textDecorationLine: "line-through" }}
+                      className={`text-xl ${
+                        activeFormats.isStrikethrough
+                          ? "text-[#e4b022] dark:text-[#d4af37]"
+                          : "text-foreground"
+                      }`}
+                    >
+                      S
+                    </AppText>
+                  </Pressable>
+
+                  {/* Bullet List */}
+                  <Pressable
+                    onPress={() => editorRef.current?.toggleBulletList()}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
+                      activeFormats.isBulletList
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <Ionicons
+                      name="list-outline"
+                      size={22}
+                      color={
+                        activeFormats.isBulletList
+                          ? Platform.OS === "ios"
+                            ? "#e4b022"
+                            : "#d4af37"
+                          : theme === "dark"
+                            ? "#e5e5ea"
+                            : "#2c2a29"
+                      }
+                    />
+                  </Pressable>
+
+                  {/* Ordered List */}
+                  <Pressable
+                    onPress={() => editorRef.current?.toggleOrderedList()}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
+                      activeFormats.isOrderedList
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <Ionicons
+                      name="list-circle-outline"
+                      size={23}
+                      color={
+                        activeFormats.isOrderedList
+                          ? Platform.OS === "ios"
+                            ? "#e4b022"
+                            : "#d4af37"
+                          : theme === "dark"
+                            ? "#e5e5ea"
+                            : "#2c2a29"
+                      }
+                    />
+                  </Pressable>
+
+                  {/* Text Color */}
+                  <Pressable
+                    onPress={() => setTextColorModalVisible(true)}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
+                      activeFormats.textColor &&
+                      activeFormats.textColor !== "inherit" &&
+                      activeFormats.textColor !== "transparent" &&
+                      activeFormats.textColor !== ""
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <View className="items-center justify-center">
+                      <AppText
+                        weight="bold"
+                        className={`text-[17px] leading-none ${
                           activeFormats.textColor &&
                           activeFormats.textColor !== "inherit" &&
                           activeFormats.textColor !== "transparent" &&
                           activeFormats.textColor !== ""
-                            ? activeFormats.textColor
-                            : theme === "dark"
-                              ? "#d4af37"
-                              : "#e4b022",
-                      }}
-                    />
-                  </View>
-                </Pressable>
+                            ? "text-[#e4b022] dark:text-[#d4af37]"
+                            : "text-foreground"
+                        }`}
+                      >
+                        A
+                      </AppText>
+                      <View
+                        className="w-4 h-[3px] rounded-sm mt-0.5"
+                        style={{
+                          backgroundColor:
+                            activeFormats.textColor &&
+                            activeFormats.textColor !== "inherit" &&
+                            activeFormats.textColor !== "transparent" &&
+                            activeFormats.textColor !== ""
+                              ? activeFormats.textColor
+                              : theme === "dark"
+                                ? "#d4af37"
+                                : "#e4b022",
+                        }}
+                      />
+                    </View>
+                  </Pressable>
 
-                {/* Highlight Color */}
-                <Pressable
-                  onPress={() => setHighlightColorModalVisible(true)}
-                  className={`w-10 h-10 justify-center items-center rounded-full ${
-                    activeFormats.highlightColor &&
-                    activeFormats.highlightColor !== "transparent" &&
-                    activeFormats.highlightColor !== ""
-                      ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
-                      : "active:bg-foreground/10"
-                  }`}
-                >
-                  <Ionicons
-                    name="brush-outline"
-                    size={20}
-                    color={
+                  {/* Highlight Color */}
+                  <Pressable
+                    onPress={() => setHighlightColorModalVisible(true)}
+                    className={`w-10 h-10 justify-center items-center rounded-full ${
                       activeFormats.highlightColor &&
                       activeFormats.highlightColor !== "transparent" &&
                       activeFormats.highlightColor !== ""
-                        ? Platform.OS === "ios"
-                          ? "#e4b022"
-                          : "#d4af37"
-                        : theme === "dark"
-                          ? "#d4af37"
-                          : "#e4b022"
-                    }
-                  />
-                </Pressable>
-              </ScrollView>
+                        ? "bg-[#e4b022]/20 dark:bg-[#d4af37]/25"
+                        : "active:bg-foreground/10"
+                    }`}
+                  >
+                    <Ionicons
+                      name="brush-outline"
+                      size={20}
+                      color={
+                        activeFormats.highlightColor &&
+                        activeFormats.highlightColor !== "transparent" &&
+                        activeFormats.highlightColor !== ""
+                          ? Platform.OS === "ios"
+                            ? "#e4b022"
+                            : "#d4af37"
+                          : theme === "dark"
+                            ? "#d4af37"
+                            : "#e4b022"
+                      }
+                    />
+                  </Pressable>
+                </ScrollView>
+              </View>
             </GlassView>
           </View>
         )}
